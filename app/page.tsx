@@ -17,7 +17,7 @@ export default function Home() {
   const createWorkspace = async () => {
     setCreating(true);
     const response = await fetch("/api/workspace", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ mode: selected, name: "North & Pine Studio" }) });
-    if (response.status === 401) { window.top!.location.href = "/signin-with-chatgpt?return_to=%2F"; return; }
+    if (response.status === 401) { window.top!.location.href = "/dashboard"; return; }
     if (!response.ok) { setCreating(false); return; }
     router.push("/dashboard");
   };
