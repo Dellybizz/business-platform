@@ -1,0 +1,1 @@
+ALTER TABLE `workspaces` ADD `theme_id` text DEFAULT 'atelier' NOT NULL;

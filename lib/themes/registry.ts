@@ -1,0 +1,10 @@
+import type { CSSProperties } from "react";
+export type ThemeDefinition={id:string;name:string;description:string;palette:[string,string,string];vars:{background:string;surface:string;foreground:string;muted:string;primary:string;primaryText:string;accent:string;radius:string;font:string}};
+export const themeRegistry:Record<string,ThemeDefinition>={
+ atelier:{id:"atelier",name:"Atelier",description:"Warm, editorial and quietly premium.",palette:["#f8f5ee","#173a2b","#d8e8dc"],vars:{background:"#f8f5ee",surface:"#ffffff",foreground:"#191a17",muted:"#6d7069",primary:"#173a2b",primaryText:"#ffffff",accent:"#d8e8dc",radius:"24px",font:"Georgia, 'Times New Roman', serif"}},
+ noir:{id:"noir",name:"Noir",description:"Bold contrast for fashion and luxury brands.",palette:["#111111","#f5efe4","#c9a86a"],vars:{background:"#111111",surface:"#1c1c1c",foreground:"#f5efe4",muted:"#aaa49a",primary:"#f5efe4",primaryText:"#111111",accent:"#c9a86a",radius:"4px",font:"Arial, Helvetica, sans-serif"}},
+ studio:{id:"studio",name:"Studio",description:"Clean, structured and ideal for services.",palette:["#f2f5f7","#1b4d68","#bcd7e5"],vars:{background:"#f2f5f7",surface:"#ffffff",foreground:"#17242b",muted:"#62727b",primary:"#1b4d68",primaryText:"#ffffff",accent:"#bcd7e5",radius:"14px",font:"Arial, Helvetica, sans-serif"}},
+ bloom:{id:"bloom",name:"Bloom",description:"Soft, expressive and personal.",palette:["#fff6f4","#8b3f54","#f2cbd4"],vars:{background:"#fff6f4",surface:"#ffffff",foreground:"#3d2830",muted:"#806c73",primary:"#8b3f54",primaryText:"#ffffff",accent:"#f2cbd4",radius:"32px",font:"Georgia, 'Times New Roman', serif"}},
+};
+export function getTheme(id?:string){return themeRegistry[id||""]||themeRegistry.atelier}
+export function themeStyle(id?:string):CSSProperties{const v=getTheme(id).vars;return{"--site-bg":v.background,"--site-surface":v.surface,"--site-fg":v.foreground,"--site-muted":v.muted,"--site-primary":v.primary,"--site-primary-text":v.primaryText,"--site-accent":v.accent,"--site-radius":v.radius,"--site-font":v.font} as CSSProperties}

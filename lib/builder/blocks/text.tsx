@@ -1,0 +1,3 @@
+import type { BlockDefinition } from "../types";
+function TextBlock({settings}:{settings:Record<string,string>}){return <div><h3 className="text-xl font-semibold">{settings.heading}</h3><p className="mt-2 text-sm leading-6 opacity-60">{settings.text}</p></div>}
+const block:BlockDefinition={type:"text",name:"Text",version:1,presets:[{name:"Text"}],component:TextBlock,defaults:{heading:"A clear heading",text:"Add supporting text that helps visitors understand your message."},fields:[{key:"heading",label:"Heading",type:"text"},{key:"text",label:"Text",type:"textarea"}]};export default block;
