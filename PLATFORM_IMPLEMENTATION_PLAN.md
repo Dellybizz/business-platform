@@ -34,7 +34,7 @@
 | Phase | Name | Status | Depends on |
 |---:|---|---|---|
 | 0 | Clean foundation and controlled reset | Complete | — |
-| 1 | Product model and workspace onboarding | Not started | 0 |
+| 1 | Product model and workspace onboarding | Complete | 0 |
 | 2 | Multi-tenant identity and permissions | Not started | 1 |
 | 3 | Shared admin shell and settings | Not started | 1–2 |
 | 4 | Website engine and page data | Not started | 1–3 |
@@ -550,9 +550,24 @@ This allows a showcase business to enable ecommerce later without migrating to a
 - Each type receives appropriate navigation and starter content.
 - Workspace type can enable more capabilities later without data loss.
 
+## Completion record — 2026-08-28
+
+- Replaced the runtime `mode` contract with validated `WorkspaceType` and additive `Capability` contracts; the legacy database column remains write-only compatibility data for existing prototype tables until its controlled removal.
+- Added four public onboarding choices with workspace/site name, preferred slug, type and conditional business category fields.
+- Added per-type capability presets and starter page sets with editable starter hero content.
+- Added a canonical migration for workspace type, business category, idempotency keys and normalized workspace capabilities, including legacy workspace backfill.
+- Made workspace creation idempotent for repeated and concurrent submissions and return a stable dashboard destination after selecting the new workspace.
+- Isolated the temporary public-owner identity adapter so Phase 2 can replace it without changing workspace creation rules.
+- Made merchant navigation, dashboard terminology, content management, settings and public-site navigation respond to workspace type and enabled capabilities.
+- Added an additive capability update path; enabling more capabilities never deletes existing capabilities or workspace content.
+- Verified the full migration chain against a legacy store workspace and confirmed conversion to `commerce_business` with website, catalog, checkout and POS capabilities.
+- Definition-of-done review on 2026-08-28 corrected retry-after-reload ownership handling, protected business category data during unrelated settings updates and made mobile navigation capability-aware.
+- Fresh-copy verification passed after `npm ci`: TypeScript, ESLint, 8 architecture/route contracts, Vinext production build and all 20 post-build tests, including seven focused Phase 1 contracts covering all four workspace types.
+- Phase 2 was not started.
+
 ## Next instruction to give Codex
 
-> Implement Phase 1 from the master plan only. Build workspace types, capabilities and reliable public onboarding inside the new Phase 0 boundaries. Reuse prototype code only when it fits those boundaries. Test all four workspace types and update the plan status.
+> Start Phase 2 from `PLATFORM_IMPLEMENTATION_PLAN.md`. Add multi-tenant authentication, memberships, roles, permissions and audit logs. Include cross-workspace isolation tests, update the plan status and do not start Phase 3.
 
 ---
 
@@ -1377,8 +1392,8 @@ This sequencing protects the annual cost target and prevents premature infrastru
 
 # Immediate next action
 
-Phase 0 is verified complete. Begin **Phase 1 — Product model and workspace onboarding**. Do not begin Phase 2 until every Phase 1 definition-of-done check passes.
+Phases 0 and 1 are verified complete. Begin **Phase 2 — Multi-tenant identity and permissions**. Do not begin Phase 3 until every Phase 2 definition-of-done check passes.
 
 Use this instruction:
 
-> Implement Phase 1 from `PLATFORM_IMPLEMENTATION_PLAN.md` only. Build workspace types, capabilities and reliable public onboarding inside the verified Phase 0 boundaries. Reuse prototype code only when it fits those boundaries. Test all four workspace types, update the plan status and do not start Phase 2.
+> Start Phase 2 from `PLATFORM_IMPLEMENTATION_PLAN.md`. Add multi-tenant authentication, memberships, roles, permissions and audit logs. Include cross-workspace isolation tests, update the plan status and do not start Phase 3.
