@@ -11,6 +11,7 @@ export type SettingsCategory = {
 
 export const settingsCategories: readonly SettingsCategory[] = [
   { id: "business", label: "Business details", description: "Name, category and business identity", icon: "business" },
+  { id: "services", label: "Services", description: "Activate Website, POS or your selected site service", icon: "services" },
   { id: "users", label: "Users and permissions", description: "Invite staff and manage access", icon: "users" },
   { id: "locations", label: "Locations", description: "Business, stock and POS locations", icon: "locations", requiresAnyCapability: ["catalog", "pos", "services"] },
   { id: "domains", label: "Domains", description: "Connected domains and DNS status", icon: "domains" },

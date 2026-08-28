@@ -1,5 +1,6 @@
 import type { Capability, WorkspaceType } from "@/src/core/workspaces/model";
 import { installedPluginNavigation, type PluginAdminNavigationItem } from "@/src/plugins/admin-navigation";
+import { hasUsableService, type ServiceEntitlement } from "@/src/core/entitlements/model";
 
 export type AdminNavigationItem = {
   id: string;
@@ -11,7 +12,7 @@ export type AdminNavigationItem = {
 
 export type AdminNavigationGroup = { id: string; label?: string; items: AdminNavigationItem[] };
 
-type Context = { type: WorkspaceType; capabilities: readonly Capability[] };
+type Context = { type: WorkspaceType; capabilities: readonly Capability[]; services: readonly ServiceEntitlement[] };
 
 const has = (context: Context, capability: Capability) => context.capabilities.includes(capability);
 
@@ -35,7 +36,10 @@ export function buildAdminNavigation(
         { id: "analytics", label: "Analytics", href: "/analytics", icon: "analytics" },
       ],
     },
-    {
+  ];
+
+  const hasWebsite = (["ecommerce_website", "business_showcase", "cv", "portfolio"] as const).some((service) => hasUsableService(context.services, service));
+  if (hasWebsite) groups.push({
       id: "website",
       label: "Website",
       items: [
@@ -44,12 +48,11 @@ export function buildAdminNavigation(
         { id: "pages", label: "Pages", href: "/pages", icon: "pages" },
         { id: "themes", label: "Themes", href: "/themes", icon: "themes" },
       ],
-    },
-  ];
+    });
 
   const channels: AdminNavigationItem[] = [];
-  if (has(context, "checkout")) channels.push({ id: "online-store", label: "Online Store", href: "/online-store", icon: "store" });
-  if (has(context, "pos")) channels.push({ id: "point-of-sale", label: "Point of Sale", href: "/pos", icon: "pos" });
+  if (hasUsableService(context.services, "ecommerce_website")) channels.push({ id: "online-store", label: "Online Store", href: "/online-store", icon: "store" });
+  if (hasUsableService(context.services, "pos")) channels.push({ id: "point-of-sale", label: "Point of Sale", href: "/pos", icon: "pos" });
   if (channels.length) groups.push({ id: "sales-channels", label: "Sales channels", items: channels });
 
   const visiblePlugins = pluginItems.filter((item) => {
