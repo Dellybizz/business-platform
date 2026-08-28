@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { workspacePresets, type Capability, type WorkspaceType } from "@/src/core/workspaces/model";
 import { settingsForWorkspace, type SettingsCategory } from "@/src/apps/merchant-admin/settings";
 import { TeamManager } from "@/components/platform/team-manager";
+import { ServiceManager } from "@/components/platform/service-manager";
 
-const icons = { business: Building2, users: Users, locations: MapPin, domains: Globe2, payments: CreditCard, checkout: PackageCheck, shipping: Truck, taxes: ReceiptText, notifications: Bell, files: FileStack, billing: CircleDollarSign, "custom-data": Database, apps: AppWindow } as const;
+const icons = { business: Building2, services: Store, users: Users, locations: MapPin, domains: Globe2, payments: CreditCard, checkout: PackageCheck, shipping: Truck, taxes: ReceiptText, notifications: Bell, files: FileStack, billing: CircleDollarSign, "custom-data": Database, apps: AppWindow } as const;
 
 export function SettingsPanel() {
   const [name, setName] = useState("");
@@ -39,7 +40,7 @@ export function SettingsPanel() {
     <header className="admin-page-header"><div><p>Configuration</p><h1>Settings</h1><span>Manage your workspace from one organized place.</span></div></header>
     <div className="admin-settings-layout">
       <aside className="admin-settings-list" aria-label="Settings categories">{categories.map((item) => { const Icon = icons[item.icon as keyof typeof icons] || Boxes; return <button type="button" key={item.id} onClick={() => select(item.id)} className={active?.id === item.id ? "is-active" : ""}><span><Icon/></span><div><strong>{item.label}</strong><small>{item.description}</small></div><ChevronRight/></button>; })}</aside>
-      <section className="admin-settings-content">{!loaded || !active ? <div className="admin-card admin-settings-loading">Loading settings…</div> : active.id === "business" ? <BusinessDetails name={name} setName={setName} type={type} category={category} setCategory={setCategory} saving={saving} saved={saved} submit={submit}/> : active.id === "users" ? <TeamManager/> : <SettingsCategoryPanel category={active} type={type} capabilities={capabilities}/>}</section>
+      <section className="admin-settings-content">{!loaded || !active ? <div className="admin-card admin-settings-loading">Loading settings…</div> : active.id === "business" ? <BusinessDetails name={name} setName={setName} type={type} category={category} setCategory={setCategory} saving={saving} saved={saved} submit={submit}/> : active.id === "services" ? <ServiceManager/> : active.id === "users" ? <TeamManager/> : <SettingsCategoryPanel category={active} type={type} capabilities={capabilities}/>}</section>
     </div>
   </main>;
 }
