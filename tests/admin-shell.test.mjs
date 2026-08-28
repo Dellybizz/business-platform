@@ -7,22 +7,22 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("..", import.meta.url));
 const source = (file) => readFile(path.join(root, file), "utf8");
 
-test("admin navigation is generated from workspace capabilities", async () => {
+test("admin navigation terminology uses capabilities while service destinations use entitlements", async () => {
   const navigation = await source("src/apps/merchant-admin/navigation.ts");
   assert.match(navigation, /has\(context, "catalog"\)/);
   assert.match(navigation, /has\(context, "services"\)/);
   assert.match(navigation, /context\.type === "cv" \? "Experience" : "Projects"/);
-  assert.match(navigation, /has\(context, "checkout"\).*Online Store/);
-  assert.match(navigation, /has\(context, "pos"\).*Point of Sale/);
+  assert.match(navigation, /hasUsableService\(context\.services, "ecommerce_website"\)/);
+  assert.match(navigation, /hasUsableService\(context\.services, "pos"\)/);
   assert.match(navigation, /label: "Sales channels"/);
 });
 
-test("CV and portfolio navigation cannot receive commerce channels without commerce capabilities", async () => {
+test("CV and portfolio navigation cannot receive commerce channels without service entitlements", async () => {
   const navigation = await source("src/apps/merchant-admin/navigation.ts");
   assert.doesNotMatch(navigation, /context\.type === "cv"[^\n]+Online Store/);
   assert.doesNotMatch(navigation, /context\.type === "portfolio"[^\n]+Point of Sale/);
-  assert.match(navigation, /if \(has\(context, "checkout"\)\)/);
-  assert.match(navigation, /if \(has\(context, "pos"\)\)/);
+  assert.match(navigation, /if \(hasUsableService\(context\.services, "ecommerce_website"\)\)/);
+  assert.match(navigation, /if \(hasUsableService\(context\.services, "pos"\)\)/);
 });
 
 test("plugins register navigation without coupling to AdminShell", async () => {
@@ -50,7 +50,7 @@ test("workspace switcher and global command palette are functional shell control
 
 test("all required settings categories exist and commerce categories are capability-gated", async () => {
   const settings = await source("src/apps/merchant-admin/settings.ts");
-  for (const label of ["Business details", "Users and permissions", "Locations", "Domains", "Payments", "Checkout", "Shipping and delivery", "Taxes", "Notifications", "Files", "Plans and billing", "Custom data", "Apps"]) {
+  for (const label of ["Business details", "Services", "Users and permissions", "Locations", "Domains", "Payments", "Checkout", "Shipping and delivery", "Taxes", "Notifications", "Files", "Plans and billing", "Custom data", "Apps"]) {
     assert.match(settings, new RegExp(`label: "${label}"`), `${label} is missing`);
   }
   for (const id of ["payments", "checkout", "shipping", "taxes"]) {

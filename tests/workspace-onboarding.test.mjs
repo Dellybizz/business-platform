@@ -81,7 +81,7 @@ test("unrelated workspace updates preserve category data and mobile navigation u
     readFile(path.join(root, "src/apps/merchant-admin/navigation.ts"), "utf8"),
   ]);
   assert.match(route, /business_category = CASE WHEN \? = 1 THEN \? ELSE business_category END/);
-  assert.match(shell, /buildAdminNavigation\(\{ type, capabilities \}\)/);
+  assert.match(shell, /buildAdminNavigation\(\{ type, capabilities, services \}\)/);
   assert.match(shell, /allItems\.filter\(\(item\) => item\.mobile\)/);
   assert.match(navigation, /mobile: true/);
 });
