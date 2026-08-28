@@ -32,8 +32,8 @@ export type WorkspacePreset = {
 
 export const workspacePresets: Record<WorkspaceType, WorkspacePreset> = {
   commerce_business: {
-    label: "Sell online and in person",
-    description: "One shared catalog for your online store and point of sale.",
+    label: "Commerce business",
+    description: "Choose an ecommerce website, POS, or both with one shared commerce core.",
     requiresBusinessCategory: true,
     capabilities: ["website", "catalog", "checkout", "pos"],
     starterPages: [

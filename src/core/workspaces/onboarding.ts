@@ -1,4 +1,10 @@
 import { isWorkspaceType, workspacePresets, type WorkspaceType } from "./model";
+import {
+  defaultServicesForWorkspaceType,
+  isServiceProduct,
+  servicesForWorkspaceType,
+  type ServiceProduct,
+} from "@/src/core/entitlements/model";
 
 export type WorkspaceOnboardingInput = {
   name?: unknown;
@@ -6,6 +12,7 @@ export type WorkspaceOnboardingInput = {
   type?: unknown;
   businessCategory?: unknown;
   requestId?: unknown;
+  services?: unknown;
 };
 
 export type ValidWorkspaceOnboarding = {
@@ -14,6 +21,7 @@ export type ValidWorkspaceOnboarding = {
   type: WorkspaceType;
   businessCategory: string | null;
   requestId: string | null;
+  services: ServiceProduct[];
 };
 
 export class OnboardingValidationError extends Error {
@@ -52,9 +60,20 @@ export function validateWorkspaceOnboarding(input: WorkspaceOnboardingInput): Va
     ? input.requestId.trim().replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80) || null
     : null;
 
-  return { name, slug, type: input.type, businessCategory: category || null, requestId };
+  const allowedServices = servicesForWorkspaceType(input.type);
+  const requestedServices = Array.isArray(input.services)
+    ? [...new Set(input.services.filter(isServiceProduct))]
+    : [...defaultServicesForWorkspaceType(input.type)];
+  if (requestedServices.some((service) => !allowedServices.includes(service))) {
+    throw new OnboardingValidationError("A selected service is not available for this workspace type");
+  }
+  if (!requestedServices.length) {
+    throw new OnboardingValidationError("Choose at least one service to activate");
+  }
+
+  return { name, slug, type: input.type, businessCategory: category || null, requestId, services: requestedServices };
 }
 
 export function onboardingKey(userId: string, input: ValidWorkspaceOnboarding) {
-  return `${userId}:${input.requestId ?? `${input.type}:${input.slug}`}`;
+  return `${userId}:${input.requestId ?? `${input.type}:${input.slug}:${input.services.slice().sort().join(",")}`}`;
 }
