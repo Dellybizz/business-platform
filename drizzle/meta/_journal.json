@@ -43,6 +43,34 @@
       "when": 1787807288317,
       "tag": "0005_freezing_tomas",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1787929061853,
+      "tag": "0006_salty_dragon_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1787940227993,
+      "tag": "0007_certain_wildside",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1787940972940,
+      "tag": "0008_lethal_madame_hydra",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1787957182864,
+      "tag": "0009_empty_unicorn",
+      "breakpoints": true
     }
   ]
 }
