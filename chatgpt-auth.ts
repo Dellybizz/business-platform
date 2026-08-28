@@ -1,11 +1,9 @@
+import { getTemporaryPublicOwner } from "@/src/core/identity/temporary-public-owner";
+
 export type ChatGPTUser = { displayName: string; email: string; fullName: string | null };
 
 export async function getChatGPTUser(): Promise<ChatGPTUser | null> {
-  return {
-    email: "public@business.zanisheluxe.in",
-    fullName: "Public workspace",
-    displayName: "Public workspace",
-  };
+  return getTemporaryPublicOwner();
 }
 
 export async function requireChatGPTUser(returnTo: string) {
