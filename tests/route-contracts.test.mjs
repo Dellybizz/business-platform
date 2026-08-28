@@ -9,8 +9,12 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const temporaryRoutes = [
   ["marketing-site", "app/page.tsx"],
   ["merchant-admin", "app/dashboard/page.tsx"],
+  ["merchant-admin", "app/site/page.tsx"],
+  ["website", "app/pages/page.tsx"],
   ["visual-editor", "app/builder/page.tsx"],
+  ["theme-engine", "app/themes/page.tsx"],
   ["storefront", "app/s/[slug]/page.tsx"],
+  ["storefront", "app/s/[slug]/[page]/page.tsx"],
 ];
 
 test("critical prototype routes remain available until vertical-slice cutover", async () => {
@@ -23,9 +27,8 @@ test("critical prototype routes remain available until vertical-slice cutover", 
 test("temporary routes have a documented removal condition", async () => {
   const inventory = await readFile(path.join(root, "docs/architecture/prototype-inventory.md"), "utf8");
   for (const [, relative] of temporaryRoutes) {
-    const routeName = relative.replace("app/", "").replace("/page.tsx", "").replace("page.tsx", "/");
     assert.ok(
-      inventory.includes(`\`${relative}\``) || inventory.includes(`\`${routeName}\``),
+      inventory.includes(`\`${relative}\``),
       `${relative} must be classified in the prototype inventory`,
     );
   }
@@ -45,4 +48,3 @@ test("every planned application surface is represented in the smoke matrix", asy
     assert.match(matrix.toLowerCase(), new RegExp(label.toLowerCase().replace("-", "[- ]")));
   }
 });
-

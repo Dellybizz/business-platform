@@ -21,6 +21,16 @@ const requiredBoundaries = [
   "shared",
 ];
 
+const requiredApplicationShells = [
+  "marketing-site",
+  "merchant-admin",
+  "platform-admin",
+  "visual-editor",
+  "pos",
+  "storefront",
+  "portals",
+];
+
 const forbiddenImports = new Map([
   ["core", [/from\s+["'][^"']*\/apps(?:\/|["'])/]],
   ["commerce", [/from\s+["'][^"']*\/apps(?:\/|["'])/]],
@@ -70,6 +80,18 @@ test("registers all planned application surfaces exactly once", async () => {
   }
 });
 
+test("creates a documented shell boundary for every planned application surface", async () => {
+  for (const shell of requiredApplicationShells) {
+    const target = path.join(sourceRoot, "apps", shell);
+    assert.equal((await stat(target)).isDirectory(), true, `${shell} must have an application shell directory`);
+    assert.equal(
+      (await stat(path.join(target, "README.md"))).isFile(),
+      true,
+      `${shell} must document its shell responsibility and cutover state`,
+    );
+  }
+});
+
 test("source domains obey dependency direction rules", async () => {
   for (const [boundary, patterns] of forbiddenImports) {
     const files = (await filesBelow(path.join(sourceRoot, boundary))).filter((file) => /\.(?:ts|tsx|mts)$/.test(file));
@@ -97,4 +119,3 @@ test("architecture decisions and migration controls are recorded", async () => {
     assert.ok(content.length > 300, `${relative} must contain a substantive contract`);
   }
 });
-
