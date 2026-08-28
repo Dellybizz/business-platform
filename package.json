@@ -10,7 +10,10 @@
     "dev": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vite",
     "build": "bash scripts/build-verified.sh",
     "start": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext start",
-    "test": "npm run build && node --test tests/*.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "test:architecture": "node --test tests/architecture-boundaries.test.mjs tests/route-contracts.test.mjs",
+    "test:postbuild": "node --test tests/*.test.mjs",
+    "test": "npm run typecheck && npm run lint && npm run test:architecture && npm run build && npm run test:postbuild",
     "lint": "bash scripts/sites-env.sh -- eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "bash scripts/sites-env.sh -- drizzle-kit generate"
   },
