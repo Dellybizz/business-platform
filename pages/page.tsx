@@ -1,0 +1,1 @@
+import{requireChatGPTUser}from"@/app/chatgpt-auth";import{AdminShell}from"@/components/platform/admin-shell";import{PagesManager}from"@/components/platform/pages-manager";export const dynamic="force-dynamic";export default async function PagesPage(){await requireChatGPTUser("/pages");return <AdminShell><PagesManager/></AdminShell>}
