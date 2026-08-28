@@ -6,6 +6,7 @@ import { BarChart3, Bell, Boxes, Building2, ChevronDown, FileText, Globe2, Home,
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { buildAdminNavigation, flattenAdminNavigation, type AdminNavigationItem } from "@/src/apps/merchant-admin/navigation";
 import type { Capability, WorkspaceType } from "@/src/core/workspaces/model";
+import type { ServiceEntitlement } from "@/src/core/entitlements/model";
 
 type Workspace = { id: string; name: string; type: WorkspaceType; role: string };
 const iconMap = { home: Home, inbox: Inbox, content: Boxes, contacts: Users, analytics: BarChart3, website: Globe2, editor: Layers3, pages: FileText, themes: Palette, store: ShoppingBag, pos: MonitorSmartphone, apps: Puzzle, settings: Settings, plugin: Puzzle } as const;
@@ -22,6 +23,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const [slug, setSlug] = useState("");
   const [type, setType] = useState<WorkspaceType>("business_showcase");
   const [capabilities, setCapabilities] = useState<Capability[]>(["website", "services"]);
+  const [services, setServices] = useState<ServiceEntitlement[]>([]);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [activeWorkspaceId, setActiveWorkspaceId] = useState("");
   const switcherRef = useRef<HTMLDivElement>(null);
@@ -30,6 +32,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
     fetch("/api/workspace").then((response) => response.ok ? response.json() : Promise.reject()).then((data) => {
       setName(data.workspace?.name || "Your workspace"); setSlug(data.workspace?.slug || "");
       setType(data.workspace?.type || "business_showcase"); setCapabilities(data.workspace?.capabilities || ["website"]);
+      setServices(data.workspace?.services || []);
       setWorkspaces(data.workspaces || []); setActiveWorkspaceId(data.workspace?.id || "");
     }).catch(() => {});
   }, []);
@@ -44,7 +47,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
     return () => { document.removeEventListener("keydown", keydown); document.removeEventListener("mousedown", pointer); };
   }, []);
 
-  const groups = useMemo(() => buildAdminNavigation({ type, capabilities }), [type, capabilities]);
+  const groups = useMemo(() => buildAdminNavigation({ type, capabilities, services }), [type, capabilities, services]);
   const allItems = useMemo(() => flattenAdminNavigation(groups), [groups]);
   const mobileItems = allItems.filter((item) => item.mobile).slice(0, 5);
   const results = allItems.filter((item) => `${item.label} ${item.href}`.toLowerCase().includes(query.toLowerCase().trim()));
