@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Capability, WorkspaceType } from "@/src/core/workspaces/model";
+import { hasUsableService, serviceCatalog, type ServiceEntitlement } from "@/src/core/entitlements/model";
 
 type Summary = { items: number; requests: number; customers: number; unread: number };
 type Item = { id: string; title: string; price: number; status: string; kind: string };
@@ -34,6 +35,7 @@ const money = new Intl.NumberFormat("en-IN", {
 export function Dashboard() {
   const [type, setType] = useState<WorkspaceType>("business_showcase");
   const [capabilities, setCapabilities] = useState<Capability[]>(["website", "services"]);
+  const [services, setServices] = useState<ServiceEntitlement[]>([]);
   const [name, setName] = useState("Your business");
   const [slug, setSlug] = useState("");
   const [status, setStatus] = useState("draft");
@@ -50,6 +52,7 @@ export function Dashboard() {
         if (workspaceData.workspace) {
           setType(workspaceData.workspace.type);
           setCapabilities(workspaceData.workspace.capabilities || []);
+          setServices(workspaceData.workspace.services || []);
           setName(workspaceData.workspace.name);
           setSlug(workspaceData.workspace.slug || "");
         }
@@ -64,15 +67,23 @@ export function Dashboard() {
   const requestLabel = capabilities.includes("checkout") ? "Orders" : capabilities.includes("bookings") ? "Bookings" : "Enquiries";
   const totalValue = useMemo(() => items.reduce((total, item) => total + Number(item.price || 0), 0), [items]);
   const isCommerce = capabilities.includes("catalog");
-  const completed = [name !== "Your business", status === "published", summary.items > 0, Boolean(slug)].filter(Boolean).length;
-  const progress = completed * 25;
-
-  const setup = [
+  const websiteService = (["ecommerce_website", "business_showcase", "cv", "portfolio"] as const).find((service) => hasUsableService(services, service));
+  const hasWebsite = Boolean(websiteService);
+  const hasPos = hasUsableService(services, "pos");
+  const combinedCommerce = hasUsableService(services, "ecommerce_website") && hasPos;
+  const setup = hasWebsite ? [
     { label: "Add your business details", done: name !== "Your business", href: "/settings" },
     { label: "Choose a theme", done: false, href: "/themes" },
     { label: `Add your first ${contentLabel.toLowerCase().slice(0, -1)}`, done: summary.items > 0, href: "/content" },
     { label: "Publish your website", done: status === "published", href: "/builder" },
+  ] : [
+    { label: "Add your business details", done: name !== "Your business", href: "/settings" },
+    { label: `Add your first ${contentLabel.toLowerCase().replace(/s$/, "")}`, done: summary.items > 0, href: "/content" },
+    { label: "Open Point of Sale", done: false, href: "/pos" },
+    { label: "Invite POS staff", done: false, href: "/settings?category=users" },
   ];
+  const completed = setup.filter((item) => item.done).length;
+  const progress = completed * 25;
 
   return (
     <main className="min-h-screen bg-[#f6f6f4] text-[#1d211d]">
@@ -82,7 +93,7 @@ export function Dashboard() {
           <h1 className="mt-0.5 text-lg font-semibold tracking-[-.02em]">{name}</h1>
         </div>
         <div className="flex items-center gap-2">
-          {slug && (
+          {slug && hasWebsite && (
             <Button asChild variant="outline" size="sm" className="hidden rounded-lg sm:flex">
               <Link href={`/s/${slug}`}><Globe2 className="size-4" />View site</Link>
             </Button>
@@ -94,7 +105,8 @@ export function Dashboard() {
       </header>
 
       <div className="mx-auto max-w-[1320px] p-4 sm:p-6 lg:p-8">
-        <div className="grid gap-4 xl:grid-cols-[250px_minmax(0,1fr)]">
+        <ServiceOverview services={services} combined={combinedCommerce}/>
+        <div className="mt-4 grid gap-4 xl:grid-cols-[250px_minmax(0,1fr)]">
           <SetupCard completed={completed} progress={progress} setup={setup} />
 
           <section className="min-w-0">
@@ -102,7 +114,7 @@ export function Dashboard() {
               <Metric label={isCommerce ? "Catalog value" : contentLabel} value={loading ? "—" : isCommerce ? money.format(totalValue) : String(summary.items)} detail={summary.items ? `${summary.items} published or draft entries` : `Add your first ${contentLabel.toLowerCase().replace(/s$/, "")}`} />
               <Metric label={requestLabel} value={loading ? "—" : String(summary.requests)} detail={`${summary.unread} awaiting review`} />
               <Metric label="Customers" value={loading ? "—" : String(summary.customers)} detail="Unique contacts" />
-              <Metric label="Website" value={loading ? "—" : status} detail={slug ? "Domain ready" : "Finish setup"} capitalize />
+              <Metric label={hasWebsite ? "Website" : "POS"} value={loading ? "—" : hasWebsite ? status : "Active"} detail={hasWebsite ? slug ? "Domain ready" : "Finish setup" : "Ready for in-person sales"} capitalize />
             </div>
 
             <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_245px]">
@@ -115,11 +127,16 @@ export function Dashboard() {
         <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,.9fr)_minmax(0,1.25fr)_245px]">
           <RecentActivity summary={summary} status={status} contentLabel={contentLabel} requestLabel={requestLabel} />
           <TopContent items={items} contentLabel={contentLabel} loading={loading} />
-          <StoreStatus status={status} slug={slug} itemCount={summary.items} title={isCommerce ? "Store status" : "Site status"} />
+          <StoreStatus status={hasWebsite ? status : "active"} slug={hasWebsite ? slug : "pos"} itemCount={summary.items} title={combinedCommerce ? "Commerce status" : hasPos && !hasWebsite ? "POS status" : isCommerce ? "Store status" : "Site status"} />
         </div>
       </div>
     </main>
   );
+}
+
+function ServiceOverview({ services, combined }: { services: ServiceEntitlement[]; combined: boolean }) {
+  const active = services.filter((item) => item.status === "active" || item.status === "trial");
+  return <Card className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center"><div className="min-w-0 flex-1"><p className="text-[11px] font-semibold uppercase tracking-[.08em] text-black/40">{combined ? "Combined business overview" : "Active service"}</p><h2 className="mt-1 text-base font-semibold">{combined ? "Website and POS share one commerce core" : active[0] ? serviceCatalog[active[0].service].label : "Choose a service"}</h2><p className="mt-1 text-xs text-black/45">{combined ? "Products, inventory, customers and orders stay synchronized across both channels." : "Only explicitly activated services appear in navigation and billing."}</p></div><div className="flex flex-wrap gap-2">{active.map((item) => <Button key={item.service} asChild size="sm" variant="outline"><Link href={serviceCatalog[item.service].dashboardHref}>{serviceCatalog[item.service].label}<ChevronRight className="size-3"/></Link></Button>)}<Button asChild size="sm" variant="outline"><Link href="/settings?category=services">Manage services</Link></Button></div></Card>;
 }
 
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
