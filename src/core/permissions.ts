@@ -36,6 +36,7 @@ export const staffPermissions = [
   "submissions.write",
   "settings.write",
   "capabilities.write",
+  "services.manage",
   "audit.read",
   "pos.sell",
   "pos.manage",
