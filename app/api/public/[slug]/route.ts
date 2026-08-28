@@ -2,13 +2,20 @@ import { env } from "cloudflare:workers";
 type Context = { params: Promise<{ slug: string }> };
 async function findWorkspace(slug: string) {
   return env.DB.prepare(
-    "SELECT id, name, mode, slug, theme_id AS themeId FROM workspaces WHERE slug = ?",
+    `SELECT w.id, w.name, w.workspace_type AS type, w.slug, w.theme_id AS themeId
+     FROM workspaces w
+     WHERE w.slug = ? AND EXISTS (
+       SELECT 1 FROM workspace_service_entitlements se
+       WHERE se.workspace_id = w.id
+         AND se.service IN ('ecommerce_website','business_showcase','cv','portfolio')
+         AND (se.status = 'active' OR (se.status = 'trial' AND (se.trial_ends_at IS NULL OR se.trial_ends_at > ?)))
+     )`,
   )
-    .bind(slug)
+    .bind(slug, Date.now())
     .first<{
       id: string;
       name: string;
-      mode: string;
+      type: string;
       slug: string;
       themeId: string;
     }>();
@@ -19,7 +26,7 @@ export async function GET(request: Request, { params }: Context) {
     pageSlug = new URL(request.url).searchParams.get("page") || "home";
   if (!workspace)
     return Response.json({ error: "Site not found" }, { status: 404 });
-  const [page, items] = await Promise.all([
+  const [page, items, navigation] = await Promise.all([
     env.DB.prepare(
       "SELECT title, status, sections_json AS sectionsJson FROM pages WHERE workspace_id = ? AND slug = ?",
     )
@@ -30,6 +37,9 @@ export async function GET(request: Request, { params }: Context) {
     )
       .bind(workspace.id)
       .all(),
+    env.DB.prepare(
+      "SELECT title, slug FROM pages WHERE workspace_id = ? ORDER BY CASE WHEN slug = 'home' THEN 0 ELSE 1 END, updated_at",
+    ).bind(workspace.id).all<{ title: string; slug: string }>(),
   ]);
   if (!page) return Response.json({ error: "Site not found" }, { status: 404 });
   return Response.json({
@@ -40,6 +50,7 @@ export async function GET(request: Request, { params }: Context) {
       sectionsJson: undefined,
     },
     items: items.results,
+    navigation: navigation.results,
   });
 }
 export async function POST(request: Request, { params }: Context) {
