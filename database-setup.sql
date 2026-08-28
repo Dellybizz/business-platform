@@ -4,6 +4,9 @@ CREATE TABLE `workspaces` (
   `id` text PRIMARY KEY NOT NULL,
   `name` text NOT NULL,
   `mode` text DEFAULT 'store' NOT NULL,
+  `workspace_type` text DEFAULT 'business_showcase' NOT NULL,
+  `business_category` text,
+  `onboarding_key` text,
   `created_at` integer NOT NULL,
   `updated_at` integer NOT NULL,
   `slug` text,
@@ -11,6 +14,17 @@ CREATE TABLE `workspaces` (
 );
 
 CREATE UNIQUE INDEX `workspaces_slug_unique` ON `workspaces` (`slug`);
+CREATE UNIQUE INDEX `workspaces_onboarding_key_unique` ON `workspaces` (`onboarding_key`);
+
+CREATE TABLE `workspace_capabilities` (
+  `workspace_id` text NOT NULL,
+  `capability` text NOT NULL,
+  `enabled_at` integer NOT NULL,
+  FOREIGN KEY (`workspace_id`) REFERENCES `workspaces`(`id`)
+);
+
+CREATE UNIQUE INDEX `workspace_capabilities_workspace_capability_unique`
+  ON `workspace_capabilities` (`workspace_id`, `capability`);
 
 CREATE TABLE `users` (
   `id` text PRIMARY KEY NOT NULL,
