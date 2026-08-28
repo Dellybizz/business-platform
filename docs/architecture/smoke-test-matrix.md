@@ -29,4 +29,15 @@
 
 ## Future surface checks
 
-Platform Admin and POS cannot be declared product-complete during Phase 0. Their registry contracts and directory boundaries exist now; functional route checks are added in their implementation phases.
+Platform Admin and the operational POS cannot be declared product-complete during Phase 0. Phase 3 adds the capability-controlled `/pos` channel entry and preparation screen; register, cart, payment and order behavior remain owned by Phase 11.
+
+## Phase 3 merchant-admin checks
+
+| Contract | Routes or source | Assertion |
+|---|---|---|
+| Shared shell | All authenticated admin routes | One responsive `AdminShell` wraps every merchant screen. |
+| Dynamic navigation | `src/apps/merchant-admin/navigation.ts` | Labels and sales channels derive from type and capabilities. |
+| Channel destinations | `/online-store`, `/pos` | Enabled commerce channels never link to a missing route. |
+| Core destinations | `/analytics`, `/contacts`, `/apps`, `/settings` | Core navigation targets render inside the shared shell. |
+| Plugin navigation | `src/plugins/admin-navigation.ts` | Plugin items are injected into the navigation builder without importing or editing the shell. |
+| Responsive UI | `app/globals.css` | Desktop sidebar, mobile drawer, bottom navigation, workspace menu and command palette have responsive contracts. |
