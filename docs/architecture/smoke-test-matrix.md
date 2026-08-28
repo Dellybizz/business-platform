@@ -6,13 +6,16 @@
 |---|---|---|
 | Marketing Site / onboarding | `/` | Route source exists; built worker returns HTML. |
 | Merchant admin | `/dashboard` | Route source and application-surface contract exist. |
+| Website overview | `/site` | Preserved route source exists and remains classified until channel cutover. |
+| Page manager | `/pages` | Preserved route source exists and remains classified until Page Service cutover. |
 | Platform admin | `platform-admin` contract | Surface is registered; route arrives in later phase. |
 | Visual editor | `/builder` | Route source and application-surface contract exist. |
+| Themes | `/themes` | Preserved route source exists and remains classified until Theme Engine cutover. |
 | POS | `pos` contract | Surface is registered; route arrives in Phase 11. |
-| Storefront | `/s/[slug]` | Route source and application-surface contract exist. |
+| Storefront | `/s/[slug]` and `/s/[slug]/[page]` | Both preserved route sources and the application-surface contract exist. |
 | Portals | `portals` contract | Surface is registered; routes arrive with account/plugins. |
 
-`tests/architecture-boundaries.test.mjs` verifies the target directories, surface registry and dependency-direction rules. `tests/route-contracts.test.mjs` verifies ownership of critical temporary routes and that planned surfaces are not accidentally omitted.
+`tests/architecture-boundaries.test.mjs` verifies the target directories, all seven application shell directories, surface registry and dependency-direction rules. `tests/route-contracts.test.mjs` verifies every prototype flow named by Phase 0, its inventory classification and that planned surfaces are not accidentally omitted.
 
 ## Required checks after each deployment
 

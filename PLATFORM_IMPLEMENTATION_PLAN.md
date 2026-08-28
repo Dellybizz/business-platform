@@ -474,19 +474,20 @@ Establish the new application/domain boundaries and a safe replacement path. The
 - Classified current routes, platform components, builder/theme code, database tables and Cloudflare tooling as reuse, migrate or replace in `docs/architecture/prototype-inventory.md`.
 - Created six accepted architecture decisions covering the modular monolith, tenancy/sales channels, registry extensibility, application surfaces, domain services and prototype replacement.
 - Established tracked `src/` boundaries for applications, core, commerce, website, content, channels, components, themes, plugins, infrastructure and shared code.
-- Registered contracts for all seven planned application surfaces without implementing Phase 1 product features.
+- Registered contracts and documented shell directories for all seven planned application surfaces without implementing Phase 1 product features.
 - Documented immutable migration history, expand/backfill/verify/switch/contract migration policy, rollback and production procedure.
 - Documented the first replacement vertical slice and prototype-removal conditions.
-- Added architecture and temporary-route contract tests plus a deployment smoke matrix.
+- Added architecture and temporary-route contract tests plus a deployment smoke matrix covering every Phase 0 preserved flow: landing/onboarding, dashboard, website overview, page manager, editor, themes and both public-site route forms.
 - Added fresh-clone, development, verification, D1 deployment and rollback guidance.
 - Added a project-local typed Cloudflare binding contract for D1, assets and image bindings.
 - Added reproducible `typecheck`, architecture-test and post-build-test commands.
-- Verification passed: TypeScript, ESLint, architecture contracts, Vinext production build and 12 post-build tests.
+- Re-audited all six definition-of-done criteria on 2026-08-28; missing shell directories and incomplete preserved-route coverage were corrected.
+- Fresh-copy verification passed after `npm ci`: TypeScript, ESLint, 8 architecture/route contracts, Vinext production build and all 13 post-build tests.
 - Phase 1 was not started.
 
 ## Next instruction to give Codex
 
-> Start Phase 0 from `PLATFORM_IMPLEMENTATION_PLAN.md`. Treat the current platform as a replaceable prototype. Classify existing code as reuse, migrate or replace; establish the new application and domain boundaries; create architecture records, migration strategy and smoke tests; run verification; and update the phase status. Do not begin Phase 1.
+> Implement Phase 1 from `PLATFORM_IMPLEMENTATION_PLAN.md` only. Build workspace types, capabilities and reliable public onboarding inside the verified Phase 0 boundaries. Reuse prototype code only when it fits those boundaries. Test all four workspace types, update the plan status and do not start Phase 2.
 
 ---
 
@@ -1376,8 +1377,8 @@ This sequencing protects the annual cost target and prevents premature infrastru
 
 # Immediate next action
 
-Begin with **Phase 0**, not the POS UI or affiliate plugin. The clean application boundaries, domain services and replacement strategy must be established before further feature screens are added.
+Phase 0 is verified complete. Begin **Phase 1 — Product model and workspace onboarding**. Do not begin Phase 2 until every Phase 1 definition-of-done check passes.
 
 Use this instruction:
 
-> Start Phase 0 from `PLATFORM_IMPLEMENTATION_PLAN.md`. Treat the current platform as a replaceable prototype. Classify existing code as reuse, migrate or replace; establish the new application and domain boundaries; create architecture records, migration strategy and smoke tests; run verification; and update the phase status. Do not begin Phase 1.
+> Implement Phase 1 from `PLATFORM_IMPLEMENTATION_PLAN.md` only. Build workspace types, capabilities and reliable public onboarding inside the verified Phase 0 boundaries. Reuse prototype code only when it fits those boundaries. Test all four workspace types, update the plan status and do not start Phase 2.
