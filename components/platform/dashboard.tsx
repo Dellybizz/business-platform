@@ -7,7 +7,6 @@ import {
   Boxes,
   Check,
   ChevronRight,
-  Circle,
   FilePlus2,
   Globe2,
   Inbox,
@@ -19,9 +18,9 @@ import {
   Settings2,
   Sparkles,
   Store,
-  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { Capability, WorkspaceType } from "@/src/core/workspaces/model";
 
 type Summary = { items: number; requests: number; customers: number; unread: number };
 type Item = { id: string; title: string; price: number; status: string; kind: string };
@@ -33,7 +32,8 @@ const money = new Intl.NumberFormat("en-IN", {
 });
 
 export function Dashboard() {
-  const [mode, setMode] = useState("store");
+  const [type, setType] = useState<WorkspaceType>("business_showcase");
+  const [capabilities, setCapabilities] = useState<Capability[]>(["website", "services"]);
   const [name, setName] = useState("Your business");
   const [slug, setSlug] = useState("");
   const [status, setStatus] = useState("draft");
@@ -48,7 +48,8 @@ export function Dashboard() {
     ])
       .then(([workspaceData, itemData]) => {
         if (workspaceData.workspace) {
-          setMode(workspaceData.workspace.mode);
+          setType(workspaceData.workspace.type);
+          setCapabilities(workspaceData.workspace.capabilities || []);
           setName(workspaceData.workspace.name);
           setSlug(workspaceData.workspace.slug || "");
         }
@@ -59,9 +60,10 @@ export function Dashboard() {
       .finally(() => setLoading(false));
   }, []);
 
-  const contentLabel = mode === "store" ? "Products" : mode === "services" ? "Services" : "Projects";
-  const requestLabel = mode === "store" ? "Orders" : mode === "services" ? "Bookings" : "Enquiries";
+  const contentLabel = capabilities.includes("catalog") ? "Products" : capabilities.includes("services") ? "Services" : type === "cv" ? "Experience" : "Projects";
+  const requestLabel = capabilities.includes("checkout") ? "Orders" : capabilities.includes("bookings") ? "Bookings" : "Enquiries";
   const totalValue = useMemo(() => items.reduce((total, item) => total + Number(item.price || 0), 0), [items]);
+  const isCommerce = capabilities.includes("catalog");
   const completed = [name !== "Your business", status === "published", summary.items > 0, Boolean(slug)].filter(Boolean).length;
   const progress = completed * 25;
 
@@ -97,15 +99,15 @@ export function Dashboard() {
 
           <section className="min-w-0">
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <Metric label="Catalog value" value={loading ? "—" : money.format(totalValue)} detail={`${summary.items} ${contentLabel.toLowerCase()}`} />
+              <Metric label={isCommerce ? "Catalog value" : contentLabel} value={loading ? "—" : isCommerce ? money.format(totalValue) : String(summary.items)} detail={summary.items ? `${summary.items} published or draft entries` : `Add your first ${contentLabel.toLowerCase().replace(/s$/, "")}`} />
               <Metric label={requestLabel} value={loading ? "—" : String(summary.requests)} detail={`${summary.unread} awaiting review`} />
               <Metric label="Customers" value={loading ? "—" : String(summary.customers)} detail="Unique contacts" />
               <Metric label="Website" value={loading ? "—" : status} detail={slug ? "Domain ready" : "Finish setup"} capitalize />
             </div>
 
             <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_245px]">
-              <OverviewChart summary={summary} label={requestLabel} />
-              <QuickActions mode={mode} />
+              <div id="analytics"><OverviewChart summary={summary} label={requestLabel} /></div>
+              <QuickActions contentLabel={contentLabel} />
             </div>
           </section>
         </div>
@@ -113,7 +115,7 @@ export function Dashboard() {
         <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,.9fr)_minmax(0,1.25fr)_245px]">
           <RecentActivity summary={summary} status={status} contentLabel={contentLabel} requestLabel={requestLabel} />
           <TopContent items={items} contentLabel={contentLabel} loading={loading} />
-          <StoreStatus status={status} slug={slug} itemCount={summary.items} />
+          <StoreStatus status={status} slug={slug} itemCount={summary.items} title={isCommerce ? "Store status" : "Site status"} />
         </div>
       </div>
     </main>
@@ -165,10 +167,10 @@ function OverviewChart({ summary, label }: { summary: Summary; label: string }) 
   );
 }
 
-function QuickActions({ mode }: { mode: string }) {
+function QuickActions({ contentLabel }: { contentLabel: string }) {
   const actions = [
     { label: "Create page", href: "/pages", icon: FilePlus2 },
-    { label: mode === "store" ? "Add product" : mode === "services" ? "Add service" : "Add project", href: "/content", icon: PackagePlus },
+    { label: `Add ${contentLabel.toLowerCase().replace(/s$/, "")}`, href: "/content", icon: PackagePlus },
     { label: "Edit website", href: "/builder", icon: Layers3 },
     { label: "Choose theme", href: "/themes", icon: Palette },
     { label: "Review inbox", href: "/inbox", icon: Inbox },
@@ -190,11 +192,11 @@ function TopContent({ items, contentLabel, loading }: { items: Item[]; contentLa
   return <Card className="overflow-hidden"><div className="flex items-center justify-between px-5 py-4"><h2 className="text-sm font-semibold">Top {contentLabel.toLowerCase()}</h2><Link href="/content" className="text-[11px] font-medium text-[#315b3d] hover:underline">View all</Link></div>{loading ? <div className="p-5 text-xs text-black/40">Loading content…</div> : items.length ? <div className="divide-y divide-black/8">{items.slice(0, 4).map((item, index) => <Link href="/content" key={item.id} className="grid grid-cols-[30px_minmax(0,1fr)_auto] items-center gap-3 px-5 py-2.5 hover:bg-black/[.015]"><span className="grid size-7 place-items-center rounded-md bg-[#f0f1ed] text-[10px] font-semibold text-black/45">{index + 1}</span><div className="min-w-0"><p className="truncate text-xs font-medium">{item.title}</p><p className="mt-0.5 text-[10px] capitalize text-black/35">{item.status}</p></div><span className="text-xs font-medium">{item.price ? money.format(item.price) : "—"}</span></Link>)}</div> : <div className="grid min-h-36 place-items-center px-5 text-center"><div><Boxes className="mx-auto size-5 text-black/25" /><p className="mt-2 text-xs font-medium">No {contentLabel.toLowerCase()} yet</p><Link href="/content" className="mt-1 inline-block text-[11px] text-[#315b3d] hover:underline">Add your first one</Link></div></div>}</Card>;
 }
 
-function StoreStatus({ status, slug, itemCount }: { status: string; slug: string; itemCount: number }) {
+function StoreStatus({ status, slug, itemCount, title }: { status: string; slug: string; itemCount: number; title: string }) {
   const rows = [
     ["Website", status === "published" ? "Live" : "Draft", status === "published"],
     ["Content", itemCount ? "Ready" : "Empty", itemCount > 0],
     ["Domain", slug ? "Connected" : "Pending", Boolean(slug)],
   ] as const;
-  return <Card className="p-5"><div className="flex items-center gap-2"><Store className="size-4 text-black/40" /><h2 className="text-sm font-semibold">Store status</h2></div><div className="mt-4 space-y-3">{rows.map(([label, value, good]) => <div key={label} className="flex items-center justify-between text-xs"><span className="text-black/45">{label}</span><span className="flex items-center gap-1.5 font-medium"><span className={`size-1.5 rounded-full ${good ? "bg-emerald-600" : "bg-amber-500"}`} />{value}</span></div>)}</div><Link href="/settings" className="mt-5 flex items-center justify-between rounded-lg bg-[#f3f4f1] px-3 py-2 text-xs font-medium">View setup <ChevronRight className="size-3.5" /></Link></Card>;
+  return <Card className="p-5"><div className="flex items-center gap-2"><Store className="size-4 text-black/40" /><h2 className="text-sm font-semibold">{title}</h2></div><div className="mt-4 space-y-3">{rows.map(([label, value, good]) => <div key={label} className="flex items-center justify-between text-xs"><span className="text-black/45">{label}</span><span className="flex items-center gap-1.5 font-medium"><span className={`size-1.5 rounded-full ${good ? "bg-emerald-600" : "bg-amber-500"}`} />{value}</span></div>)}</div><Link href="/settings" className="mt-5 flex items-center justify-between rounded-lg bg-[#f3f4f1] px-3 py-2 text-xs font-medium">View setup <ChevronRight className="size-3.5" /></Link></Card>;
 }

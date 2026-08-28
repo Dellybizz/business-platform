@@ -75,10 +75,13 @@ test("workspace persistence is idempotent and capabilities are additive", async 
 });
 
 test("unrelated workspace updates preserve category data and mobile navigation uses capabilities", async () => {
-  const [route, shell] = await Promise.all([
+  const [route, shell, navigation] = await Promise.all([
     readFile(path.join(root, "app/api/workspace/route.ts"), "utf8"),
     readFile(path.join(root, "components/platform/admin-shell.tsx"), "utf8"),
+    readFile(path.join(root, "src/apps/merchant-admin/navigation.ts"), "utf8"),
   ]);
   assert.match(route, /business_category = CASE WHEN \? = 1 THEN \? ELSE business_category END/);
-  assert.match(shell, /const mobileNavigation = \[manage\[0\], website\[0\], business\[0\], business\[1\], account\[1\]\]/);
+  assert.match(shell, /buildAdminNavigation\(\{ type, capabilities \}\)/);
+  assert.match(shell, /allItems\.filter\(\(item\) => item\.mobile\)/);
+  assert.match(navigation, /mobile: true/);
 });
