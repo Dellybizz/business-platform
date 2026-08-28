@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { env } from "cloudflare:workers";
-import { getChatGPTUser } from "@/app/chatgpt-auth";
+import { requireSessionUser } from "@/src/core/identity/session";
 import { isCapability, isWorkspaceType, type Capability, type WorkspaceType } from "@/src/core/workspaces/model";
 
 export type TenantContext = {
@@ -30,19 +30,7 @@ type MembershipRow = {
 };
 
 export async function ensureUser() {
-  const identity = await getChatGPTUser();
-  if (!identity) throw new Response("Authentication required", { status: 401 });
-  let user = await env.DB.prepare(
-    "SELECT id, email, display_name AS displayName FROM users WHERE email = ?",
-  ).bind(identity.email).first<{ id: string; email: string; displayName: string }>();
-  if (!user) {
-    const id = crypto.randomUUID();
-    await env.DB.prepare(
-      "INSERT INTO users (id, email, display_name, created_at) VALUES (?, ?, ?, ?)",
-    ).bind(id, identity.email, identity.displayName, Date.now()).run();
-    user = { id, email: identity.email, displayName: identity.displayName };
-  }
-  return user;
+  return requireSessionUser();
 }
 
 const membershipQuery = `
@@ -58,19 +46,8 @@ const membershipQuery = `
 
 export async function requireTenant(): Promise<TenantContext> {
   const user = await ensureUser();
-  let memberships = await env.DB.prepare(membershipQuery).bind(user.id).all<MembershipRow>();
-  if (!memberships.results.length) {
-    const claimed = await env.DB.prepare("SELECT COUNT(*) AS total FROM memberships").first<{ total: number }>();
-    const legacy = Number(claimed?.total || 0) === 0
-      ? await env.DB.prepare("SELECT id FROM workspaces WHERE id = 'demo-workspace'").first<{ id: string }>()
-      : null;
-    if (legacy) {
-      await env.DB.prepare(
-        "INSERT INTO memberships (id, user_id, workspace_id, role, created_at) VALUES (?, ?, ?, 'owner', ?)",
-      ).bind(crypto.randomUUID(), user.id, legacy.id, Date.now()).run();
-      memberships = await env.DB.prepare(membershipQuery).bind(user.id).all<MembershipRow>();
-    }
-  }
+  const memberships = await env.DB.prepare(membershipQuery).bind(user.id).all<MembershipRow>();
+  if (!memberships.results.length) throw new Response("Create a workspace first", { status: 409 });
 
   const selected = (await cookies()).get(ACTIVE_WORKSPACE_COOKIE)?.value;
   const membership = memberships.results.find((item) => item.workspaceId === selected) ?? memberships.results[0];
