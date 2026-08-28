@@ -11,6 +11,7 @@ import {
   Home,
   Inbox,
   Layers3,
+  LogOut,
   Menu,
   Palette,
   Plus,
@@ -76,6 +77,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
       return <Link key={label} href={href} onClick={() => setOpen(false)} className={`admin-nav-item ${active ? "is-active" : ""}`}><Icon className="size-[16px]"/><span>{label}</span></Link>;
     })}</>
   );
+  const mobileNavigation = [manage[0], website[0], business[0], business[1], account[1]];
 
   return <div className="admin-shell">
     <header className="admin-mobile-bar"><button onClick={() => setOpen(true)} aria-label="Open navigation"><Menu/></button><Link href="/dashboard" className="admin-brand"><LogoMark/>Modulo</Link>{slug ? <Link href={`/s/${slug}`} aria-label="View website"><Globe2/></Link> : <span/>}</header>
@@ -93,11 +95,11 @@ export function AdminShell({ children }: { children: ReactNode }) {
     <div className="admin-canvas">
       <header className="admin-topbar">
         <label><Search/><input placeholder="Search or jump to…"/><kbd>⌘ K</kbd></label>
-        <div><Link href="/content" className="admin-create"><Plus/>Create</Link><Link href="/inbox" aria-label="Notifications"><Bell/></Link><Link href="/businesses" className="admin-avatar">{name.slice(0, 2).toUpperCase()}</Link></div>
+        <div><Link href="/content" className="admin-create"><Plus/>Create</Link><Link href="/inbox" aria-label="Notifications"><Bell/></Link><Link href="/businesses" className="admin-avatar">{name.slice(0, 2).toUpperCase()}</Link><Link href="/api/auth/logout" aria-label="Sign out"><LogOut/></Link></div>
       </header>
       {children}
     </div>
-    <nav className="admin-bottom-nav">{[...manage, ...website, ...business].slice(0, 5).map(({ href, label, icon: Icon }) => <Link key={label} href={href} className={path === href ? "is-active" : ""}><Icon/><span>{label}</span></Link>)}</nav>
+    <nav className="admin-bottom-nav">{mobileNavigation.map(({ href, label, icon: Icon }) => <Link key={label} href={href} className={path === href ? "is-active" : ""}><Icon/><span>{label}</span></Link>)}</nav>
   </div>;
 }
 

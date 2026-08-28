@@ -1,86 +1,18 @@
 import { env } from "cloudflare:workers";
-type Context = { params: Promise<{ slug: string }> };
-async function findWorkspace(slug: string) {
-  return env.DB.prepare(
-    "SELECT id, name, workspace_type AS type, slug, theme_id AS themeId FROM workspaces WHERE slug = ?",
-  )
-    .bind(slug)
-    .first<{
-      id: string;
-      name: string;
-      type: string;
-      slug: string;
-      themeId: string;
-    }>();
-}
-export async function GET(request: Request, { params }: Context) {
-  const { slug } = await params,
-    workspace = await findWorkspace(slug),
-    pageSlug = new URL(request.url).searchParams.get("page") || "home";
-  if (!workspace)
-    return Response.json({ error: "Site not found" }, { status: 404 });
-  const [page, items, navigation] = await Promise.all([
-    env.DB.prepare(
-      "SELECT title, status, sections_json AS sectionsJson FROM pages WHERE workspace_id = ? AND slug = ?",
-    )
-      .bind(workspace.id, pageSlug)
-      .first(),
-    env.DB.prepare(
-      "SELECT id, kind, title, description, price, status FROM content_items WHERE workspace_id = ? AND status = 'active' ORDER BY created_at DESC",
-    )
-      .bind(workspace.id)
-      .all(),
-    env.DB.prepare(
-      "SELECT title, slug FROM pages WHERE workspace_id = ? ORDER BY CASE WHEN slug = 'home' THEN 0 ELSE 1 END, updated_at",
-    ).bind(workspace.id).all<{ title: string; slug: string }>(),
-  ]);
-  if (!page) return Response.json({ error: "Site not found" }, { status: 404 });
-  return Response.json({
-    workspace,
-    page: {
-      ...page,
-      sections: JSON.parse(String(page.sectionsJson || "[]")),
-      sectionsJson: undefined,
-    },
-    items: items.results,
-    navigation: navigation.results,
-  });
-}
-export async function POST(request: Request, { params }: Context) {
-  const { slug } = await params,
-    workspace = await findWorkspace(slug);
-  if (!workspace)
-    return Response.json({ error: "Site not found" }, { status: 404 });
-  const body = (await request.json()) as {
-    type?: string;
-    itemId?: string;
-    itemTitle?: string;
-    customerName?: string;
-    email?: string;
-    phone?: string;
-    message?: string;
-  };
-  if (!body.customerName?.trim() || !body.email?.trim())
-    return Response.json(
-      { error: "Name and email are required" },
-      { status: 400 },
-    );
-  const id = crypto.randomUUID();
-  await env.DB.prepare(
-    "INSERT INTO submissions (id, workspace_id, type, item_id, item_title, customer_name, email, phone, message, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?)",
-  )
-    .bind(
-      id,
-      workspace.id,
-      body.type || "enquiry",
-      body.itemId || null,
-      body.itemTitle || "General enquiry",
-      body.customerName.trim(),
-      body.email.trim(),
-      body.phone?.trim() || "",
-      body.message?.trim() || "",
-      Date.now(),
-    )
-    .run();
-  return Response.json({ id }, { status: 201 });
+import { verifySecret } from "@/src/core/identity/crypto";
+import { createSession } from "@/src/core/identity/session";
+import { writeAuditEvent } from "@/src/core/audit/service";
+
+export async function POST(request: Request) {
+  const body = await request.json() as { email?: string; password?: string };
+  const email = body.email?.trim().toLowerCase() || "";
+  const user = await env.DB.prepare(
+    "SELECT id, password_hash AS passwordHash FROM users WHERE email = ?",
+  ).bind(email).first<{ id: string; passwordHash: string | null }>();
+  if (!user?.passwordHash || !body.password || !await verifySecret(body.password, user.passwordHash)) {
+    return Response.json({ error: "Email or password is incorrect" }, { status: 401 });
+  }
+  await createSession(user.id);
+  await writeAuditEvent({ actorUserId: user.id, action: "session.created", targetType: "user", targetId: user.id });
+  return Response.json({ ok: true });
 }

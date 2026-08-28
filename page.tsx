@@ -52,6 +52,10 @@ export default function Home() {
         }),
       });
       const data = await response.json() as { error?: string; dashboardUrl?: string };
+      if (response.status === 401) {
+        window.location.assign(`/login?returnTo=${encodeURIComponent("/")}`);
+        return;
+      }
       if (!response.ok) throw new Error(data.error || "Workspace could not be created");
       window.location.assign(data.dashboardUrl || "/dashboard");
     } catch (cause) {
@@ -74,7 +78,7 @@ export default function Home() {
         <span className="inline-flex items-center gap-2 rounded-full bg-[#dff2e5] px-3 py-1.5 text-sm font-medium text-[#18392b]"><Sparkles className="size-4"/> One platform, four starting points</span>
         <h1 className="mt-6 text-5xl font-semibold leading-[1.02] tracking-[-.055em] sm:text-6xl">Start with exactly what you need.</h1>
         <p className="mt-6 max-w-lg text-lg leading-8 text-black/55">Online store and POS share one business. Showcase, CV and portfolio sites stay focused—and every workspace can gain more capabilities later.</p>
-        <div className="mt-8 space-y-3 text-sm text-black/65">{["Appropriate pages and modules from the first click", "Public prototype access—no login required yet", "Add capabilities later without rebuilding your site"].map((item) => <div className="flex items-center gap-3" key={item}><span className="grid size-6 place-items-center rounded-full bg-[#18392b] text-white"><Check className="size-3.5"/></span>{item}</div>)}</div>
+        <div className="mt-8 space-y-3 text-sm text-black/65">{["Appropriate pages and modules from the first click", "Secure account and workspace separation", "Add capabilities later without rebuilding your site"].map((item) => <div className="flex items-center gap-3" key={item}><span className="grid size-6 place-items-center rounded-full bg-[#18392b] text-white"><Check className="size-3.5"/></span>{item}</div>)}</div>
       </div>
       <div className="rounded-[2rem] border border-black/8 bg-white p-5 shadow-[0_25px_70px_rgba(38,43,34,.12)] sm:p-8">
         <p className="text-sm font-medium text-black/45">CREATE YOUR WORKSPACE</p>
