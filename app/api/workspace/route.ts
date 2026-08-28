@@ -17,10 +17,14 @@ import {
   validateWorkspaceOnboarding,
   type WorkspaceOnboardingInput,
 } from "@/src/core/workspaces/onboarding";
+import { requirePermission } from "@/src/core/authorization/service";
+import { writeAuditEvent } from "@/src/core/audit/service";
+import { capabilitiesForServices } from "@/src/core/entitlements/model";
+import { requireAnyServiceEntitlement } from "@/src/core/entitlements/service";
 
 export async function GET(request: Request) {
   try {
-    const ctx = await requireTenant();
+    const ctx = await requirePermission(await requireTenant(), "workspace.read");
     const workspaceId = ctx.workspace.id;
     const pageSlug = new URL(request.url).searchParams.get("page") || "home";
     const page = await env.DB.prepare(
@@ -97,6 +101,7 @@ export async function POST(request: Request) {
     const id = crypto.randomUUID();
     const now = Date.now();
     const preset = workspacePresets[input.type];
+    const selectedCapabilities = capabilitiesForServices(input.services);
     const statements = [
       env.DB.prepare(
         `INSERT INTO workspaces
@@ -116,10 +121,15 @@ export async function POST(request: Request) {
       env.DB.prepare(
         "INSERT INTO memberships (id, user_id, workspace_id, role, created_at) VALUES (?, ?, ?, 'owner', ?)",
       ).bind(crypto.randomUUID(), identity.id, id, now),
-      ...preset.capabilities.map((capability) => env.DB.prepare(
+      ...input.services.map((service) => env.DB.prepare(
+        `INSERT INTO workspace_service_entitlements
+          (workspace_id, service, status, activated_at, trial_ends_at, suspended_at, cancelled_at, updated_at)
+         VALUES (?, ?, 'active', ?, NULL, NULL, NULL, ?)`,
+      ).bind(id, service, now, now)),
+      ...selectedCapabilities.map((capability) => env.DB.prepare(
         "INSERT INTO workspace_capabilities (workspace_id, capability, enabled_at) VALUES (?, ?, ?)",
       ).bind(id, capability, now)),
-      ...preset.starterPages.map((page) => env.DB.prepare(
+      ...(selectedCapabilities.includes("website") ? preset.starterPages : []).map((page) => env.DB.prepare(
         "INSERT INTO pages (id, workspace_id, slug, title, status, sections_json, updated_at) VALUES (?, ?, ?, ?, 'draft', ?, ?)",
       ).bind(
         crypto.randomUUID(),
@@ -149,6 +159,7 @@ export async function POST(request: Request) {
       });
     }
     await selectWorkspace(id, identity.id);
+    await writeAuditEvent({ workspaceId: id, actorUserId: identity.id, action: "workspace.created", targetType: "workspace", targetId: id, metadata: { type: input.type, services: input.services } });
     return Response.json({ id, slug: input.slug, dashboardUrl: "/dashboard", idempotent: false }, { status: 201 });
   } catch (error) {
     return routeError(error);
@@ -158,9 +169,11 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const ctx = await requireTenant();
+    await requirePermission(ctx, "workspace.read");
     const body = (await request.json()) as { workspaceId?: string };
     if (!body.workspaceId) return Response.json({ error: "Workspace is required" }, { status: 400 });
     await selectWorkspace(body.workspaceId, ctx.user.id);
+    await writeAuditEvent({ workspaceId: body.workspaceId, actorUserId: ctx.user.id, action: "workspace.selected", targetType: "workspace", targetId: body.workspaceId });
     return Response.json({ ok: true, dashboardUrl: "/dashboard" });
   } catch (error) {
     return routeError(error);
@@ -185,6 +198,13 @@ export async function PUT(request: Request) {
     const name = body.name?.trim().slice(0, 100) || null;
     const category = body.businessCategory?.trim().slice(0, 80) || null;
     const categoryWasProvided = body.businessCategory !== undefined;
+    if (name || categoryWasProvided || body.themeId) await requirePermission(ctx, "settings.write");
+    if (Array.isArray(body.addCapabilities) && body.addCapabilities.length) await requirePermission(ctx, "capabilities.write");
+    if (body.sections) {
+      requireAnyServiceEntitlement(ctx, ["ecommerce_website", "business_showcase", "cv", "portfolio"]);
+      await requirePermission(ctx, "pages.write");
+    }
+    if (body.status === "published") await requirePermission(ctx, "pages.publish");
     if (name || body.businessCategory !== undefined || body.themeId) {
       statements.push(env.DB.prepare(
         `UPDATE workspaces
@@ -214,6 +234,14 @@ export async function PUT(request: Request) {
       ));
     }
     if (statements.length) await env.DB.batch(statements);
+    if (statements.length) await writeAuditEvent({
+      workspaceId,
+      actorUserId: ctx.user.id,
+      action: body.status === "published" ? "page.published" : body.sections ? "page.updated" : "workspace.updated",
+      targetType: body.sections || body.status ? "page" : "workspace",
+      targetId: body.sections || body.status ? body.pageSlug || "home" : workspaceId,
+      metadata: { addedCapabilities: additions },
+    });
     return Response.json({ ok: true, updatedAt: now });
   } catch (error) {
     return routeError(error);
