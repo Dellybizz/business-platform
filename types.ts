@@ -1,0 +1,12 @@
+import type { ComponentType } from "react";
+import type { Capability } from "@/src/core/workspaces/model";
+export type SectionSettings = Record<string, string>;
+export type SiteBlock = { id:string; type:string; settings:SectionSettings };
+export type SiteSection = { id: string; type: string; settings: SectionSettings; blocks?:SiteBlock[] };
+export type SectionField = { key: string; label: string; type: "text" | "textarea" | "color" };
+export type BlockPreset = { name:string; settings?:SectionSettings };
+export type BlockDefinition = { type:string; name:string; version:number; presets:BlockPreset[]; defaults:SectionSettings; fields:SectionField[]; component:ComponentType<{settings:SectionSettings}> };
+export type BlockModule = { default:BlockDefinition };
+export type SectionPreset = { name: string; settings?: SectionSettings; blocks?:{type:string;preset?:number}[] };
+export type SectionDefinition = { type:string; name:string; category:"Essentials"|"Commerce"|"Services"|"Portfolio"; description:string; version:number; presets:SectionPreset[]; requiredCapabilities?:Capability[]; blocks?:"@theme"|string[]; maxBlocks?:number; defaults:SectionSettings; fields:SectionField[]; component:ComponentType<{settings:SectionSettings;blocks?:SiteBlock[]}> };
+export type SectionModule = { default: SectionDefinition };

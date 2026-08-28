@@ -1,0 +1,55 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1787793360219,
+      "tag": "0000_black_johnny_storm",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1787793716176,
+      "tag": "0001_dapper_marten_broadcloak",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1787805147030,
+      "tag": "0002_silly_mole_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1787806290708,
+      "tag": "0003_orange_quasar",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1787806647793,
+      "tag": "0004_thin_manta",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1787807288317,
+      "tag": "0005_freezing_tomas",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1787929061853,
+      "tag": "0006_salty_dragon_man",
+      "breakpoints": true
+    }
+  ]
+}
