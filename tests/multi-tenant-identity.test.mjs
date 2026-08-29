@@ -66,8 +66,10 @@ test("authentication uses hardened password hashes, revocable sessions, and reco
   const session = await source("src/core/identity/session.ts");
   const recovery = await source("app/api/auth/recover/route.ts");
   assert.match(crypto, /PBKDF2/);
-  assert.match(crypto, /PASSWORD_ITERATIONS = 210_000/);
+  assert.match(crypto, /MAX_SUPPORTED_PBKDF2_ITERATIONS = 100_000/);
+  assert.match(crypto, /PASSWORD_ITERATIONS = MAX_SUPPORTED_PBKDF2_ITERATIONS/);
   assert.match(crypto, /iterations:\s*PASSWORD_ITERATIONS/);
+  assert.match(crypto, /iterations > MAX_SUPPORTED_PBKDF2_ITERATIONS/);
   assert.match(session, /httpOnly:\s*true/);
   assert.match(session, /secure:\s*true/);
   assert.match(session, /revoked_at IS NULL/);
