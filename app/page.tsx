@@ -54,7 +54,10 @@ export default function Home() {
           requestId: requestId.current,
         }),
       });
-      const data = await response.json() as { error?: string; dashboardUrl?: string };
+      const contentType = response.headers.get("content-type") || "";
+      const data = contentType.includes("application/json")
+        ? await response.json() as { error?: string; dashboardUrl?: string }
+        : { error: (await response.text()).trim() || "Workspace could not be created" };
       if (response.status === 401) {
         window.location.assign(`/login?returnTo=${encodeURIComponent("/")}`);
         return;
