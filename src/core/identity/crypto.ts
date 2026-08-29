@@ -1,5 +1,6 @@
 const encoder = new TextEncoder();
-const PASSWORD_ITERATIONS = 210_000;
+const MAX_SUPPORTED_PBKDF2_ITERATIONS = 100_000;
+const PASSWORD_ITERATIONS = MAX_SUPPORTED_PBKDF2_ITERATIONS;
 
 function encode(bytes: Uint8Array) {
   let value = "";
@@ -34,9 +35,11 @@ export async function hashSecret(secret: string) {
 export async function verifySecret(secret: string, stored: string) {
   const [algorithm, iterationText, saltText, expectedText] = stored.split("$");
   if (algorithm !== "pbkdf2" || !iterationText || !saltText || !expectedText) return false;
+  const iterations = Number(iterationText);
+  if (!Number.isSafeInteger(iterations) || iterations < 1 || iterations > MAX_SUPPORTED_PBKDF2_ITERATIONS) return false;
   const material = await crypto.subtle.importKey("raw", encoder.encode(secret), "PBKDF2", false, ["deriveBits"]);
   const bits = new Uint8Array(await crypto.subtle.deriveBits(
-    { name: "PBKDF2", hash: "SHA-256", salt: decode(saltText), iterations: Number(iterationText) },
+    { name: "PBKDF2", hash: "SHA-256", salt: decode(saltText), iterations },
     material,
     256,
   ));
