@@ -29,6 +29,12 @@ const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
 const localBindingConfig = {
   main: "./worker/index.ts",
   compatibility_flags: ["nodejs_compat"],
+  // Dashboard-managed secret values remain encrypted. Declaring their names
+  // makes the generated Wrangler config validate and expose the bindings to
+  // the Vinext RSC and SSR Worker environments.
+  secrets: {
+    required: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
+  },
   d1_databases: d1
     ? [
         {
