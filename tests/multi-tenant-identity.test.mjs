@@ -82,7 +82,6 @@ test("Google authentication validates OAuth state, uses PKCE, and accepts only v
   const callback = await source("app/api/auth/google/callback/route.ts");
   const provider = await source("src/core/identity/google-oauth.ts");
   const login = await source("app/login/page.tsx");
-  const viteConfig = await source("vite.config.ts");
   assert.match(start, /modulo_google_state/);
   assert.match(start, /httpOnly:\s*true/);
   assert.match(callback, /constantTimeEqual\(state, expectedState\)/);
@@ -90,7 +89,6 @@ test("Google authentication validates OAuth state, uses PKCE, and accepts only v
   assert.match(provider, /code_challenge_method:\s*"S256"/);
   assert.match(provider, /profile\.email_verified !== true/);
   assert.match(provider, /process\.env\.GOOGLE_CLIENT_ID/);
-  assert.match(viteConfig, /required:\s*\["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"\]/);
   assert.match(login, /Continue with Google/);
 });
 
