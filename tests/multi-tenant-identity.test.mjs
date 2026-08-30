@@ -77,30 +77,20 @@ test("authentication uses hardened password hashes, revocable sessions, and reco
   assert.match(recovery, /revokeAllUserSessions/);
 });
 
-test("Google authentication uses Supabase PKCE and links verified identities", async () => {
+test("Google authentication validates OAuth state, uses PKCE, and accepts only verified emails", async () => {
   const start = await source("app/api/auth/google/route.ts");
-  const browserStart = await source("app/auth/google/page.tsx");
-  const callback = await source("app/auth/callback/page.tsx");
-  const browserAuth = await source("lib/auth/supabase-browser.ts");
-  const exchange = await source("app/api/auth/supabase/route.ts");
-  const config = await source("lib/auth/supabase-config.ts");
-  const migration = await source("drizzle/0010_supabase_identity.sql");
+  const callback = await source("app/api/auth/google/callback/route.ts");
+  const provider = await source("src/core/identity/google-oauth.ts");
   const login = await source("app/login/page.tsx");
-  assert.match(start, /new URL\("\/auth\/google"/);
-  assert.match(browserStart, /startSupabaseGoogleOAuth/);
-  assert.match(browserAuth, /code_challenge_method/);
-  assert.match(browserAuth, /grant_type=pkce/);
-  assert.match(callback, /exchangeSupabaseCode\(code\)/);
-  assert.match(callback, /\/api\/auth\/supabase/);
-  assert.match(exchange, /\/auth\/v1\/user/);
-  assert.match(exchange, /email_confirmed_at/);
-  assert.match(exchange, /createSession\(userId\)/);
-  assert.match(exchange, /auth_provider = 'supabase'/);
-  assert.match(config, /VITE_SUPABASE_URL/);
-  assert.match(config, /VITE_SUPABASE_PUBLISHABLE_KEY/);
-  assert.match(migration, /users_auth_identity_unique/);
+  assert.match(start, /modulo_google_state/);
+  assert.match(start, /httpOnly:\s*true/);
+  assert.match(callback, /constantTimeEqual\(state, expectedState\)/);
+  assert.match(callback, /createSession\(user\.id\)/);
+  assert.match(provider, /code_challenge_method:\s*"S256"/);
+  assert.match(provider, /profile\.email_verified !== true/);
   assert.match(login, /Continue with Google/);
 });
+
 test("staff management and sensitive workspace mutations write audit events", async () => {
   for (const file of [
     "app/api/members/route.ts",
