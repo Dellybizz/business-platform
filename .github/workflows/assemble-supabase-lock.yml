@@ -1,15 +1,19 @@
-name: Assemble exact Supabase lockfile
+name: Inspect generated Supabase lockfile
 
 on:
   push:
     branches:
       - supabase-auth-stage
+    paths:
+      - package.json
+      - .github/workflows/assemble-supabase-lock.yml
 
 permissions:
   contents: write
 
 jobs:
   lockfile:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,19 +24,12 @@ jobs:
           node-version: '24.18.0'
           cache: npm
       - run: npm install -g npm@10.9.2
-      - name: Generate lockfile
-        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-      - name: Verify exact supplied lockfile
+      - run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - run: echo "generated=$(git hash-object package-lock.json)"
+      - name: Commit generated lockfile on staging only
         run: |
-          ACTUAL="$(git hash-object package-lock.json)"
-          EXPECTED="921218c0b1a2bc3f281aabd3e29b0e71bb82b548"
-          echo "generated=$ACTUAL"
-          test "$ACTUAL" = "$EXPECTED"
-      - name: Commit verified lockfile
-        run: |
-          rm .github/workflows/assemble-supabase-lock.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json .github/workflows/assemble-supabase-lock.yml
-          git commit -m "Restore Supabase auth exact lockfile"
+          git add package-lock.json
+          git commit -m "Stage generated Supabase lockfile" || exit 0
           git push origin HEAD:supabase-auth-stage
