@@ -77,17 +77,23 @@ test("authentication uses hardened password hashes, revocable sessions, and reco
   assert.match(recovery, /revokeAllUserSessions/);
 });
 
-test("Google authentication validates OAuth state, uses PKCE, and accepts only verified emails", async () => {
+test("Supabase validates Google identity while Modulo retains its D1 session", async () => {
   const start = await source("app/api/auth/google/route.ts");
-  const callback = await source("app/api/auth/google/callback/route.ts");
-  const provider = await source("src/core/identity/google-oauth.ts");
+  const callback = await source("app/auth/callback/page.tsx");
+  const bridge = await source("app/api/auth/supabase/route.ts");
+  const browser = await source("lib/auth/supabase-browser.ts");
+  const config = await source("lib/auth/supabase-config.ts");
   const login = await source("app/login/page.tsx");
-  assert.match(start, /modulo_google_state/);
-  assert.match(start, /httpOnly:\s*true/);
-  assert.match(callback, /constantTimeEqual\(state, expectedState\)/);
-  assert.match(callback, /createSession\(user\.id\)/);
-  assert.match(provider, /code_challenge_method:\s*"S256"/);
-  assert.match(provider, /profile\.email_verified !== true/);
+  assert.match(start, /\/auth\/google/);
+  assert.match(callback, /exchangeCodeForSession\(code\)/);
+  assert.match(callback, /\/api\/auth\/supabase/);
+  assert.match(browser, /flowType:\s*"pkce"/);
+  assert.match(bridge, /auth\.getUser\(body\.accessToken\)/);
+  assert.match(bridge, /user\.email_confirmed_at/);
+  assert.match(bridge, /createSession\(userId\)/);
+  assert.match(bridge, /auth_provider = 'supabase'/);
+  assert.match(config, /VITE_SUPABASE_PUBLISHABLE_KEY/);
+  assert.doesNotMatch(`${bridge}\n${browser}\n${config}`, /service_role|SUPABASE_SECRET_KEY/);
   assert.match(login, /Continue with Google/);
 });
 
