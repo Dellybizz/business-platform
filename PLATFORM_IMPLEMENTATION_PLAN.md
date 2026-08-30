@@ -35,9 +35,9 @@
 |---:|---|---|---|
 | 0 | Clean foundation and controlled reset | Complete | — |
 | 1 | Product model and workspace onboarding | Complete | 0 |
-| 2 | Multi-tenant identity and permissions | Not started | 1 |
-| 3 | Shared admin shell and settings | Not started | 1–2 |
-| 4 | Website engine and page data | Not started | 1–3 |
+| 2 | Multi-tenant identity and permissions | Complete | 1 |
+| 3 | Shared admin shell and settings | Complete | 1–2 |
+| 4 | Website engine and page data | Complete | 1–3 |
 | 5 | Automatic section and block registry | Not started | 4 |
 | 6 | Visual store/site editor | Not started | 5 |
 | 7 | Themes, templates and versioning | Not started | 5–6 |
@@ -716,9 +716,23 @@ Create a channel-neutral website engine used by stores, showcase sites, CVs and 
 - Custom domains resolve to the correct workspace and published site.
 - One renderer supports all workspace types.
 
+## Completion record — 2026-08-30
+
+- Added a workspace-owned `Site` aggregate and normalized page engine entities for immutable page versions, nested navigation, redirects, assets, preview tokens and verified domain-to-site mapping.
+- Replaced unvalidated editor persistence with a bounded, versioned page-document schema that validates component IDs, types, scalar settings, child blocks, maximum sizes and schema compatibility before any draft save or publish.
+- Added safe page lifecycle services and permission-protected routes for create, duplicate, draft save, publish, unpublish, soft delete and expiring draft preview tokens.
+- Publishing now creates an immutable published snapshot while the editor continues writing only to its independent draft version; unpublishing and deletion remove the live pointer without destroying version history.
+- Added all required page types and structured SEO fields for title, description, canonical URL, social image and index controls.
+- Added nested menu and redirect management APIs and connected menus and SEO metadata to the shared renderer used by commerce, showcase, CV and portfolio workspaces.
+- Added verified custom-domain resolution in the Worker and published-site resolution by either workspace slug or verified hostname. Drafts are served only when a valid, unexpired, non-revoked preview token is supplied.
+- Added an additive D1 migration that creates the new engine, backfills one site per existing workspace, converts legacy section JSON into schema-versioned draft documents, and preserves existing published pages as published snapshots.
+- Added focused Phase 4 tests covering the entity model, migration, schema validation, complete page lifecycle, draft/live isolation, preview protection, domain routing, navigation, SEO, redirects and shared renderer.
+- Full TypeScript, lint, architecture contracts, production build and post-build test suite passed after the definition-of-done review.
+- Phase 5 was not started.
+
 ## Next instruction to give Codex
 
-> Implement Phase 4 from the master plan. Build the versioned website/page engine, draft-publish separation, navigation, SEO and domain resolution. Migrate existing page data safely and update the plan status.
+> Start Phase 5 from `PLATFORM_IMPLEMENTATION_PLAN.md`. Build the typed automatic section/block registry on the completed versioned website engine, verify every definition-of-done item, update the plan status and do not start Phase 6.
 
 ---
 
@@ -1392,8 +1406,8 @@ This sequencing protects the annual cost target and prevents premature infrastru
 
 # Immediate next action
 
-Phases 0 and 1 are verified complete. Begin **Phase 2 — Multi-tenant identity and permissions**. Do not begin Phase 3 until every Phase 2 definition-of-done check passes.
+Phases 0–4 are verified complete. Phase 5 has not been started. Begin **Phase 5 — Automatic section and block registry** only when explicitly instructed.
 
 Use this instruction:
 
-> Start Phase 2 from `PLATFORM_IMPLEMENTATION_PLAN.md`. Add multi-tenant authentication, memberships, roles, permissions and audit logs. Include cross-workspace isolation tests, update the plan status and do not start Phase 3.
+> Start Phase 5 from `PLATFORM_IMPLEMENTATION_PLAN.md`. Build the typed automatic section/block registry on the completed versioned website engine, verify every definition-of-done item, update the plan status and do not start Phase 6.

@@ -71,8 +71,19 @@ export const customDomains = sqliteTable("custom_domains", {
   workspaceId: text("workspace_id").notNull().references(() => workspaces.id),
   hostname: text("hostname").notNull().unique(),
   status: text("status").notNull().default("pending"),
+  siteId: text("site_id"),
+  verifiedAt: integer("verified_at", { mode: "timestamp_ms" }),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
 });
+
+export const sites = sqliteTable("sites", {
+  id: text("id").primaryKey(),
+  workspaceId: text("workspace_id").notNull().references(() => workspaces.id),
+  name: text("name").notNull(),
+  status: text("status").notNull().default("active"),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+}, (table) => [uniqueIndex("sites_workspace_unique").on(table.workspaceId)]);
 
 export const memberships = sqliteTable("memberships", {
   id: text("id").primaryKey(),
@@ -145,7 +156,79 @@ export const pages = sqliteTable("pages", {
   title: text("title").notNull(),
   status: text("status").notNull().default("draft"),
   sectionsJson: text("sections_json").notNull().default("[]"),
+  siteId: text("site_id").references(() => sites.id),
+  pageType: text("page_type").notNull().default("standard"),
+  templateKey: text("template_key"),
+  draftVersionId: text("draft_version_id"),
+  publishedVersionId: text("published_version_id"),
+  seoTitle: text("seo_title"),
+  seoDescription: text("seo_description"),
+  canonicalUrl: text("canonical_url"),
+  socialImageAssetId: text("social_image_asset_id"),
+  indexable: integer("indexable", { mode: "boolean" }).notNull().default(true),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }),
+  deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+}, (table) => [uniqueIndex("pages_site_slug_unique").on(table.siteId, table.slug)]);
+
+export const pageVersions = sqliteTable("page_versions", {
+  id: text("id").primaryKey(),
+  pageId: text("page_id").notNull().references(() => pages.id),
+  versionNumber: integer("version_number").notNull(),
+  state: text("state").notNull().default("draft"),
+  schemaVersion: integer("schema_version").notNull().default(1),
+  documentJson: text("document_json").notNull(),
+  createdBy: text("created_by").references(() => users.id),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  publishedAt: integer("published_at", { mode: "timestamp_ms" }),
+}, (table) => [uniqueIndex("page_versions_page_number_unique").on(table.pageId, table.versionNumber)]);
+
+export const navigationMenus = sqliteTable("navigation_menus", {
+  id: text("id").primaryKey(),
+  siteId: text("site_id").notNull().references(() => sites.id),
+  handle: text("handle").notNull(),
+  name: text("name").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+}, (table) => [uniqueIndex("navigation_menus_site_handle_unique").on(table.siteId, table.handle)]);
+
+export const navigationMenuItems = sqliteTable("navigation_menu_items", {
+  id: text("id").primaryKey(),
+  menuId: text("menu_id").notNull().references(() => navigationMenus.id),
+  parentId: text("parent_id"),
+  label: text("label").notNull(),
+  url: text("url").notNull(),
+  position: integer("position").notNull().default(0),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+});
+
+export const siteRedirects = sqliteTable("site_redirects", {
+  id: text("id").primaryKey(),
+  siteId: text("site_id").notNull().references(() => sites.id),
+  sourcePath: text("source_path").notNull(),
+  destination: text("destination").notNull(),
+  statusCode: integer("status_code").notNull().default(301),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+}, (table) => [uniqueIndex("site_redirects_site_source_unique").on(table.siteId, table.sourcePath)]);
+
+export const siteAssets = sqliteTable("site_assets", {
+  id: text("id").primaryKey(),
+  siteId: text("site_id").notNull().references(() => sites.id),
+  storageKey: text("storage_key").notNull(),
+  mimeType: text("mime_type").notNull(),
+  altText: text("alt_text").notNull().default(""),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+});
+
+export const sitePreviewTokens = sqliteTable("site_preview_tokens", {
+  id: text("id").primaryKey(),
+  siteId: text("site_id").notNull().references(() => sites.id),
+  pageId: text("page_id").references(() => pages.id),
+  tokenHash: text("token_hash").notNull().unique(),
+  expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+  createdBy: text("created_by").notNull().references(() => users.id),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  revokedAt: integer("revoked_at", { mode: "timestamp_ms" }),
 });
 
 export const contentItems = sqliteTable("content_items", {

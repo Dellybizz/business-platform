@@ -11,13 +11,18 @@ test("tenant repositories scope reads and object mutations to the active workspa
   const contracts = [
     ["app/api/items/route.ts", /WHERE workspace_id = \?/, /WHERE id = \? AND workspace_id = \?/],
     ["app/api/submissions/route.ts", /WHERE workspace_id = \?/, /WHERE id = \? AND workspace_id = \?/],
-    ["app/api/pages/route.ts", /WHERE workspace_id\s*=\s*\?/],
     ["app/api/members/route.ts", /WHERE m\.workspace_id = \?/, /WHERE id = \? AND workspace_id = \?/],
   ];
   for (const [file, ...patterns] of contracts) {
     const body = await source(file);
     for (const pattern of patterns) assert.match(body, pattern, `${file} must enforce ${pattern}`);
   }
+  const pageRoute = await source("app/api/pages/route.ts");
+  const websiteService = await source("src/website/service.ts");
+  assert.match(pageRoute, /listPages\(env\.DB, context\.workspace\.id\)/);
+  assert.match(pageRoute, /workspace: context\.workspace/);
+  assert.match(websiteService, /JOIN sites s ON s\.id=p\.site_id WHERE s\.workspace_id=\?/);
+  assert.match(websiteService, /WHERE p\.id=\? AND s\.workspace_id=\?/);
   assert.match(await source("lib/auth/tenant.ts"), /WHERE m\.user_id = \?/);
   assert.match(await source("lib/auth/tenant.ts"), /WHERE workspace_id = \? AND user_id = \?/);
 });

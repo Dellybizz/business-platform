@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { resolvePublicPage } from "@/src/website/service";
 type Context = { params: Promise<{ slug: string }> };
 async function findWorkspace(slug: string) {
   return env.DB.prepare(
@@ -21,34 +22,22 @@ async function findWorkspace(slug: string) {
     }>();
 }
 export async function GET(request: Request, { params }: Context) {
-  const { slug } = await params,
-    workspace = await findWorkspace(slug),
-    pageSlug = new URL(request.url).searchParams.get("page") || "home";
-  if (!workspace)
-    return Response.json({ error: "Site not found" }, { status: 404 });
-  const [page, items, navigation] = await Promise.all([
-    env.DB.prepare(
-      "SELECT title, status, sections_json AS sectionsJson FROM pages WHERE workspace_id = ? AND slug = ?",
-    )
-      .bind(workspace.id, pageSlug)
-      .first(),
+  const { slug } = await params, url=new URL(request.url), pageSlug=url.searchParams.get("page")||"home";
+  const resolved=await resolvePublicPage(env.DB,{slug,hostname:request.headers.get("host")||undefined,pageSlug,previewToken:url.searchParams.get("preview")});
+  if(!resolved)return Response.json({error:"Site not found"},{status:404});
+  const workspace={id:String(resolved.site.workspaceId),name:String(resolved.site.name),type:String(resolved.site.workspaceType),slug:String(resolved.site.slug),themeId:String(resolved.site.themeId),mode:String(resolved.site.mode)};
+  const [items, navigation] = await Promise.all([
     env.DB.prepare(
       "SELECT id, kind, title, description, price, status FROM content_items WHERE workspace_id = ? AND status = 'active' ORDER BY created_at DESC",
     )
       .bind(workspace.id)
       .all(),
-    env.DB.prepare(
-      "SELECT title, slug FROM pages WHERE workspace_id = ? ORDER BY CASE WHEN slug = 'home' THEN 0 ELSE 1 END, updated_at",
-    ).bind(workspace.id).all<{ title: string; slug: string }>(),
+    env.DB.prepare(`SELECT i.id,i.parent_id AS parentId,i.label,i.url,i.position FROM navigation_menu_items i JOIN navigation_menus m ON m.id=i.menu_id JOIN sites s ON s.id=m.site_id WHERE s.workspace_id=? AND m.handle='main' ORDER BY i.position`).bind(workspace.id).all(),
   ]);
-  if (!page) return Response.json({ error: "Site not found" }, { status: 404 });
   return Response.json({
     workspace,
-    page: {
-      ...page,
-      sections: JSON.parse(String(page.sectionsJson || "[]")),
-      sectionsJson: undefined,
-    },
+    page: {...resolved.page,sections:resolved.page.document.sections,document:undefined},
+    preview:resolved.preview,
     items: items.results,
     navigation: navigation.results,
   });

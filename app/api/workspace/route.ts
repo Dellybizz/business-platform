@@ -21,15 +21,16 @@ import { requirePermission } from "@/src/core/authorization/service";
 import { writeAuditEvent } from "@/src/core/audit/service";
 import { capabilitiesForServices } from "@/src/core/entitlements/model";
 import { requireAnyServiceEntitlement } from "@/src/core/entitlements/service";
+import { documentFromLegacySections } from "@/src/website/page-document";
+import { publishPage, readDraftPage, saveDraft } from "@/src/website/service";
 
 export async function GET(request: Request) {
   try {
     const ctx = await requirePermission(await requireTenant(), "workspace.read");
     const workspaceId = ctx.workspace.id;
     const pageSlug = new URL(request.url).searchParams.get("page") || "home";
-    const page = await env.DB.prepare(
-      "SELECT id, title, slug, status, sections_json AS sectionsJson, updated_at AS updatedAt FROM pages WHERE workspace_id = ? AND slug = ?",
-    ).bind(workspaceId, pageSlug).first();
+    const pageRecord = await env.DB.prepare("SELECT id,status FROM pages WHERE workspace_id=? AND slug=? AND deleted_at IS NULL").bind(workspaceId,pageSlug).first<{id:string;status:string}>();
+    const page = pageRecord ? await readDraftPage(env.DB,workspaceId,pageRecord.id) : null;
     const [items, requests, customers, unread] = await env.DB.batch([
       env.DB.prepare("SELECT COUNT(*) AS total FROM content_items WHERE workspace_id = ?").bind(workspaceId),
       env.DB.prepare("SELECT COUNT(*) AS total FROM submissions WHERE workspace_id = ?").bind(workspaceId),
@@ -44,8 +45,9 @@ export async function GET(request: Request) {
       page: page
         ? {
             ...page,
-            sections: JSON.parse(String(page.sectionsJson || "[]")),
-            sectionsJson: undefined,
+            status: pageRecord?.status,
+            sections: page.document.sections,
+            document: undefined,
           }
         : null,
       summary: {
@@ -102,6 +104,8 @@ export async function POST(request: Request) {
     const now = Date.now();
     const preset = workspacePresets[input.type];
     const selectedCapabilities = capabilitiesForServices(input.services);
+    const siteId = crypto.randomUUID();
+    const starterPages = selectedCapabilities.includes("website") ? preset.starterPages.map((page) => ({page,id:crypto.randomUUID(),versionId:crypto.randomUUID()})) : [];
     const statements = [
       env.DB.prepare(
         `INSERT INTO workspaces
@@ -121,6 +125,7 @@ export async function POST(request: Request) {
       env.DB.prepare(
         "INSERT INTO memberships (id, user_id, workspace_id, role, created_at) VALUES (?, ?, ?, 'owner', ?)",
       ).bind(crypto.randomUUID(), identity.id, id, now),
+      ...(selectedCapabilities.includes("website") ? [env.DB.prepare("INSERT INTO sites (id,workspace_id,name,status,created_at,updated_at) VALUES (?,?,?,'active',?,?)").bind(siteId,id,input.name,now,now)] : []),
       ...input.services.map((service) => env.DB.prepare(
         `INSERT INTO workspace_service_entitlements
           (workspace_id, service, status, activated_at, trial_ends_at, suspended_at, cancelled_at, updated_at)
@@ -129,16 +134,11 @@ export async function POST(request: Request) {
       ...selectedCapabilities.map((capability) => env.DB.prepare(
         "INSERT INTO workspace_capabilities (workspace_id, capability, enabled_at) VALUES (?, ?, ?)",
       ).bind(id, capability, now)),
-      ...(selectedCapabilities.includes("website") ? preset.starterPages : []).map((page) => env.DB.prepare(
-        "INSERT INTO pages (id, workspace_id, slug, title, status, sections_json, updated_at) VALUES (?, ?, ?, ?, 'draft', ?, ?)",
+      ...starterPages.flatMap(({page,id:pageId,versionId}) => [env.DB.prepare(
+        "INSERT INTO pages (id,workspace_id,site_id,slug,title,status,sections_json,page_type,draft_version_id,indexable,created_at,updated_at) VALUES (?,?,?,?,?,'draft',?, ?,?,1,?,?)",
       ).bind(
-        crypto.randomUUID(),
-        id,
-        page.slug,
-        page.title,
-        JSON.stringify(starterSectionsFor(input.type, page)),
-        now,
-      )),
+        pageId,id,siteId,page.slug,page.title,JSON.stringify(starterSectionsFor(input.type,page)),page.slug==='home'?'home':page.slug==='contact'?'contact':'standard',versionId,now,now,
+      ),env.DB.prepare("INSERT INTO page_versions (id,page_id,version_number,state,schema_version,document_json,created_by,created_at) VALUES (?,?,1,'draft',1,?,?,?)").bind(versionId,pageId,JSON.stringify(documentFromLegacySections(starterSectionsFor(input.type,page))),identity.id,now)]),
     ];
     try {
       await env.DB.batch(statements);
@@ -222,18 +222,13 @@ export async function PUT(request: Request) {
         "INSERT OR IGNORE INTO workspace_capabilities (workspace_id, capability, enabled_at) VALUES (?, ?, ?)",
       ).bind(workspaceId, capability, now));
     }
-    if (body.sections || body.status) {
-      statements.push(env.DB.prepare(
-        "UPDATE pages SET sections_json = COALESCE(?, sections_json), status = COALESCE(?, status), updated_at = ? WHERE workspace_id = ? AND slug = ?",
-      ).bind(
-        body.sections ? JSON.stringify(body.sections) : null,
-        body.status || null,
-        now,
-        workspaceId,
-        body.pageSlug || "home",
-      ));
-    }
     if (statements.length) await env.DB.batch(statements);
+    if (body.sections || body.status === "published") {
+      const page=await env.DB.prepare("SELECT id FROM pages WHERE workspace_id=? AND slug=? AND deleted_at IS NULL").bind(workspaceId,body.pageSlug||"home").first<{id:string}>();
+      if(!page) throw new Response("Page not found",{status:404});
+      if(body.sections) await saveDraft(env.DB,{workspaceId,pageId:page.id,actorUserId:ctx.user.id,document:documentFromLegacySections(body.sections)});
+      if(body.status==="published") await publishPage(env.DB,{workspaceId,pageId:page.id,actorUserId:ctx.user.id});
+    }
     if (statements.length) await writeAuditEvent({
       workspaceId,
       actorUserId: ctx.user.id,

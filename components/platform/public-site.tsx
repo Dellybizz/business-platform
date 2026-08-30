@@ -38,8 +38,9 @@ const copy = {
 export function PublicSite({ slug, pageSlug="home" }: { slug: string; pageSlug?:string }) {
   const [data, setData] = useState<{
       workspace: { name: string; mode: keyof typeof copy };
-      page: { sections: SiteSection[] };
+      page: { title:string; sections: SiteSection[]; seo?:{title?:string|null;description?:string|null;indexable?:boolean} };
       items: Item[];
+      navigation:Array<{id:string;parentId?:string|null;label:string;url:string;position:number}>;
     } | null>(null),
     [selected, setSelected] = useState<Item | null>(null),
     [sent, setSent] = useState(false),
@@ -53,6 +54,7 @@ export function PublicSite({ slug, pageSlug="home" }: { slug: string; pageSlug?:
       })
       .catch((e) => setError(e.message));
   }, [slug, pageSlug]);
+  useEffect(()=>{if(!data)return;document.title=data.page.seo?.title||data.page.title||data.workspace.name;let meta=document.querySelector<HTMLMetaElement>('meta[name="description"]');if(!meta){meta=document.createElement("meta");meta.name="description";document.head.append(meta);}meta.content=data.page.seo?.description||"";let robots=document.querySelector<HTMLMetaElement>('meta[name="robots"]');if(!robots){robots=document.createElement("meta");robots.name="robots";document.head.append(robots);}robots.content=data.page.seo?.indexable===false?"noindex,nofollow":"index,follow";},[data]);
   if (error)
     return (
       <main className="grid min-h-screen place-items-center bg-[#f7f6f2]">
@@ -92,9 +94,7 @@ export function PublicSite({ slug, pageSlug="home" }: { slug: string; pageSlug?:
     <main className="min-h-screen bg-[#fbfaf7] text-[#191a17]">
       <header className="flex h-16 items-center justify-between border-b border-black/8 px-6 lg:px-12">
         <strong>{data.workspace.name}</strong>
-        <nav className="text-sm text-black/50">
-          Home&nbsp;&nbsp;&nbsp; About&nbsp;&nbsp;&nbsp; Contact
-        </nav>
+        <nav aria-label="Main navigation" className="text-sm text-black/50"><ul className="flex gap-5">{(data.navigation||[]).filter(item=>!item.parentId).map(item=><li key={item.id} className="relative"><a href={item.url}>{item.label}</a>{data.navigation.some(child=>child.parentId===item.id)&&<ul className="absolute right-0 z-20 mt-2 min-w-40 rounded-xl border bg-white p-2 shadow-lg">{data.navigation.filter(child=>child.parentId===item.id).map(child=><li key={child.id}><a className="block rounded-lg px-3 py-2 hover:bg-black/5" href={child.url}>{child.label}</a></li>)}</ul>}</li>)}</ul></nav>
       </header>
       {data.page.sections.map((s) => {
         const def = sectionRegistry[s.type];
