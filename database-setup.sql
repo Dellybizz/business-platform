@@ -32,13 +32,10 @@ CREATE TABLE `users` (
   `display_name` text NOT NULL,
   `password_hash` text,
   `email_verified_at` integer,
-  `auth_provider` text,
-  `auth_subject` text,
   `created_at` integer NOT NULL
 );
 
 CREATE UNIQUE INDEX `users_email_unique` ON `users` (`email`);
-CREATE UNIQUE INDEX `users_auth_identity_unique` ON `users` (`auth_provider`, `auth_subject`);
 
 CREATE TABLE `memberships` (
   `id` text PRIMARY KEY NOT NULL,

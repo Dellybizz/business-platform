@@ -20,28 +20,19 @@ npm test
 
 For individual checks, see the development and deployment guide.
 
-## Google sign-in through Supabase Auth
+## Google sign-in
 
-Supabase handles Google identity verification. Workspace data, authorization, sessions, commerce data, and content remain in Cloudflare D1/R2.
-
-1. Enable Google in **Supabase → Authentication → Providers** and enter the Google OAuth client ID and secret there.
-2. Add the Supabase provider callback to the Google Cloud Web OAuth client:
+Create an OAuth 2.0 Web application in Google Cloud and register this production redirect URI:
 
 ```text
-https://<project-ref>.supabase.co/auth/v1/callback
+https://business.zanisheluxe.in/api/auth/google/callback
 ```
 
-3. In **Supabase → Authentication → URL Configuration**, set the Site URL to `https://business.zanisheluxe.in` and add:
+Add the credentials to the deployed Cloudflare Worker as secrets/variables:
 
-```text
-https://business.zanisheluxe.in/auth/callback
+```bash
+npx wrangler secret put GOOGLE_CLIENT_ID
+npx wrangler secret put GOOGLE_CLIENT_SECRET
 ```
 
-4. Add these browser-safe values to the Cloudflare build environment and redeploy:
-
-```text
-VITE_SUPABASE_URL=https://<project-ref>.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
-```
-
-Never expose a Supabase secret key or `service_role` key. The Google client secret belongs in Supabase, not in the Cloudflare Worker.
+For local development, place the same names in an ignored `.dev.vars` file and register the local callback URL shown by the development server. Never commit either credential.
