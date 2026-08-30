@@ -77,6 +77,20 @@ test("authentication uses hardened password hashes, revocable sessions, and reco
   assert.match(recovery, /revokeAllUserSessions/);
 });
 
+test("Google authentication validates OAuth state, uses PKCE, and accepts only verified emails", async () => {
+  const start = await source("app/api/auth/google/route.ts");
+  const callback = await source("app/api/auth/google/callback/route.ts");
+  const provider = await source("src/core/identity/google-oauth.ts");
+  const login = await source("app/login/page.tsx");
+  assert.match(start, /modulo_google_state/);
+  assert.match(start, /httpOnly:\s*true/);
+  assert.match(callback, /constantTimeEqual\(state, expectedState\)/);
+  assert.match(callback, /createSession\(user\.id\)/);
+  assert.match(provider, /code_challenge_method:\s*"S256"/);
+  assert.match(provider, /profile\.email_verified !== true/);
+  assert.match(login, /Continue with Google/);
+});
+
 test("staff management and sensitive workspace mutations write audit events", async () => {
   for (const file of [
     "app/api/members/route.ts",

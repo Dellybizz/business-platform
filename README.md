@@ -20,3 +20,19 @@ npm test
 
 For individual checks, see the development and deployment guide.
 
+## Google sign-in
+
+Create an OAuth 2.0 Web application in Google Cloud and register this production redirect URI:
+
+```text
+https://business.zanisheluxe.in/api/auth/google/callback
+```
+
+Add the credentials to the deployed Cloudflare Worker as secrets/variables:
+
+```bash
+npx wrangler secret put GOOGLE_CLIENT_ID
+npx wrangler secret put GOOGLE_CLIENT_SECRET
+```
+
+For local development, place the same names in an ignored `.dev.vars` file and register the local callback URL shown by the development server. Never commit either credential.
