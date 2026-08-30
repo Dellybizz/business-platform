@@ -10,13 +10,6 @@ type GoogleEnvironment = typeof env & {
   GOOGLE_CLIENT_SECRET?: string;
 };
 
-type RuntimeGlobal = typeof globalThis & {
-  __MODULO_RUNTIME_ENV__?: {
-    GOOGLE_CLIENT_ID?: string;
-    GOOGLE_CLIENT_SECRET?: string;
-  };
-};
-
 export type GoogleProfile = {
   sub: string;
   email: string;
@@ -26,17 +19,10 @@ export type GoogleProfile = {
 
 function credentials() {
   const runtime = env as GoogleEnvironment;
-  const requestRuntime = (globalThis as RuntimeGlobal).__MODULO_RUNTIME_ENV__;
-  // `cloudflare:workers` is the primary binding API. With nodejs_compat,
-  // Cloudflare also exposes string and secret bindings through process.env;
-  // that fallback covers Vinext child environments that do not inherit the
-  // virtual env namespace correctly.
-  const clientId = requestRuntime?.GOOGLE_CLIENT_ID || runtime.GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = requestRuntime?.GOOGLE_CLIENT_SECRET || runtime.GOOGLE_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET;
-  if (!clientId || !clientSecret) {
+  if (!runtime.GOOGLE_CLIENT_ID || !runtime.GOOGLE_CLIENT_SECRET) {
     throw new Error("Google login is not configured");
   }
-  return { clientId, clientSecret };
+  return { clientId: runtime.GOOGLE_CLIENT_ID, clientSecret: runtime.GOOGLE_CLIENT_SECRET };
 }
 
 export async function googleAuthorizationUrl(input: {

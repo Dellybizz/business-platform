@@ -6,8 +6,10 @@ export const users = sqliteTable("users", {
   displayName: text("display_name").notNull(),
   passwordHash: text("password_hash"),
   emailVerifiedAt: integer("email_verified_at", { mode: "timestamp_ms" }),
+  authProvider: text("auth_provider"),
+  authSubject: text("auth_subject"),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
-});
+}, (table) => [uniqueIndex("users_auth_identity_unique").on(table.authProvider, table.authSubject)]);
 
 export const sessions = sqliteTable("sessions", {
   id: text("id").primaryKey(),
