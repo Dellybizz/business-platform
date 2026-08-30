@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { env } from "cloudflare:workers";
 import { randomToken, sha256 } from "./crypto";
+import { cache } from "react";
 
 const SESSION_COOKIE = "modulo_session";
 const SESSION_LIFETIME = 30 * 24 * 60 * 60 * 1000;
@@ -22,19 +23,29 @@ export async function createSession(userId: string) {
   });
 }
 
-export async function getSessionUser(): Promise<SessionUser | null> {
+const SESSION_TOUCH_INTERVAL = 5 * 60 * 1000;
+
+async function resolveSessionUser(): Promise<SessionUser | null> {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
   const now = Date.now();
   const row = await env.DB.prepare(
-    `SELECT u.id, u.email, u.display_name AS displayName, s.id AS sessionId
+    `SELECT u.id, u.email, u.display_name AS displayName, s.id AS sessionId,
+       s.last_seen_at AS lastSeenAt
      FROM sessions s JOIN users u ON u.id = s.user_id
      WHERE s.token_hash = ? AND s.revoked_at IS NULL AND s.expires_at > ?`,
-  ).bind(await sha256(token), now).first<SessionUser & { sessionId: string }>();
+  ).bind(await sha256(token), now).first<SessionUser & { sessionId: string; lastSeenAt: number }>();
   if (!row) return null;
-  await env.DB.prepare("UPDATE sessions SET last_seen_at = ? WHERE id = ?").bind(now, row.sessionId).run();
+  if (now - row.lastSeenAt >= SESSION_TOUCH_INTERVAL) {
+    await env.DB.prepare("UPDATE sessions SET last_seen_at = ? WHERE id = ? AND last_seen_at < ?")
+      .bind(now, row.sessionId, now - SESSION_TOUCH_INTERVAL).run();
+  }
   return { id: row.id, email: row.email, displayName: row.displayName };
 }
+
+// React cache is request-scoped on the server, so nested authorization helpers do
+// not repeat the session lookup while separate requests remain fully isolated.
+export const getSessionUser = cache(resolveSessionUser);
 
 export async function requireSessionUser() {
   const user = await getSessionUser();

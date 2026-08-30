@@ -59,7 +59,7 @@ export function WebsiteBuilder() {
         loaded.current = true;
       })
       .catch(() => setSaveState("error"));
-  }, []);
+  }, [pageSlug]);
   useEffect(() => {
     if (!loaded.current) return;
     setSaveState("saving");
@@ -76,7 +76,7 @@ export function WebsiteBuilder() {
         .catch(() => setSaveState("error"));
     }, 600);
     return () => clearTimeout(timer);
-  }, [sections]);
+  }, [sections, pageSlug]);
   const current = sections.find((s) => s.id === active),
     def = current ? sectionRegistry[current.type] : null;
   const move = (index: number, dir: number) => {

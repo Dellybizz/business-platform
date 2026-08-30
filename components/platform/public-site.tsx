@@ -52,7 +52,7 @@ export function PublicSite({ slug, pageSlug="home" }: { slug: string; pageSlug?:
         setData(d);
       })
       .catch((e) => setError(e.message));
-  }, [slug]);
+  }, [slug, pageSlug]);
   if (error)
     return (
       <main className="grid min-h-screen place-items-center bg-[#f7f6f2]">

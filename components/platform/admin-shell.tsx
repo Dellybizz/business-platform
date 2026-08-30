@@ -7,6 +7,7 @@ import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { buildAdminNavigation, flattenAdminNavigation, type AdminNavigationItem } from "@/src/apps/merchant-admin/navigation";
 import type { Capability, WorkspaceType } from "@/src/core/workspaces/model";
 import type { ServiceEntitlement } from "@/src/core/entitlements/model";
+import { invalidateWorkspace, loadWorkspace } from "@/lib/client/workspace";
 
 type Workspace = { id: string; name: string; type: WorkspaceType; role: string };
 const iconMap = { home: Home, inbox: Inbox, content: Boxes, contacts: Users, analytics: BarChart3, website: Globe2, editor: Layers3, pages: FileText, themes: Palette, store: ShoppingBag, pos: MonitorSmartphone, apps: Puzzle, settings: Settings, plugin: Puzzle } as const;
@@ -29,7 +30,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const switcherRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch("/api/workspace").then((response) => response.ok ? response.json() : Promise.reject()).then((data) => {
+    loadWorkspace().then((data) => {
       setName(data.workspace?.name || "Your workspace"); setSlug(data.workspace?.slug || "");
       setType(data.workspace?.type || "business_showcase"); setCapabilities(data.workspace?.capabilities || ["website"]);
       setServices(data.workspace?.services || []);
@@ -56,7 +57,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
     if (workspaceId === activeWorkspaceId) { setWorkspaceOpen(false); return; }
     setSwitching(workspaceId);
     const response = await fetch("/api/workspace", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ workspaceId }) });
-    if (response.ok) window.location.assign("/dashboard"); else setSwitching("");
+    if (response.ok) { invalidateWorkspace(); window.location.assign("/dashboard"); } else setSwitching("");
   };
   const openItem = (item: AdminNavigationItem) => { setPaletteOpen(false); setQuery(""); setMobileOpen(false); router.push(item.href); };
 

@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { BarChart3, Boxes, ChevronRight, ContactRound, Globe2, Inbox, MonitorSmartphone, Puzzle, Store } from "lucide-react";
 import { useEffect, useState } from "react";
+import { loadWorkspace } from "@/lib/client/workspace";
 
 type ModuleId = "analytics" | "contacts" | "online-store" | "pos" | "apps";
 type WorkspaceData = { workspace?: { name: string; slug: string; capabilities: string[] }; summary?: { items: number; requests: number; customers: number; unread: number }; page?: { status: string } };
@@ -19,7 +20,7 @@ export function AdminModulePage({ module }: { module: ModuleId }) {
   const [data, setData] = useState<WorkspaceData>({});
   const [submissions, setSubmissions] = useState<{ id: string; customerName: string; email: string; status: string; type: string }[]>([]);
   useEffect(() => {
-    fetch("/api/workspace").then((response) => response.json()).then(setData);
+    loadWorkspace().then((value) => setData(value as WorkspaceData));
     if (module === "contacts") fetch("/api/submissions").then((response) => response.json()).then((value) => setSubmissions(value.submissions || []));
   }, [module]);
   const summary = data.summary || { items: 0, requests: 0, customers: 0, unread: 0 };

@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import type { Capability, WorkspaceType } from "@/src/core/workspaces/model";
 import { hasUsableService, serviceCatalog, type ServiceEntitlement } from "@/src/core/entitlements/model";
+import { loadWorkspace } from "@/lib/client/workspace";
 
 type Summary = { items: number; requests: number; customers: number; unread: number };
 type Item = { id: string; title: string; price: number; status: string; kind: string };
@@ -45,7 +46,7 @@ export function Dashboard() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/workspace").then((response) => response.json()),
+      loadWorkspace(),
       fetch("/api/items").then((response) => response.json()),
     ])
       .then(([workspaceData, itemData]) => {

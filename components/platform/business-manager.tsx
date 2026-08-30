@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable react-hooks/immutability -- navigation intentionally leaves the current document */
 import { FormEvent, useEffect, useState } from "react";
 import { BriefcaseBusiness, Check, Plus, ShoppingBag, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";

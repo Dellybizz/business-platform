@@ -87,23 +87,40 @@ export async function requireTenant(): Promise<TenantContext> {
 
 export async function listUserWorkspaces(userId: string) {
   const workspaces = await env.DB.prepare(membershipQuery).bind(userId).all<MembershipRow>();
-  return Promise.all(workspaces.results.map(async (workspace) => {
-    const capabilityRows = await env.DB.prepare(
-      "SELECT capability FROM workspace_capabilities WHERE workspace_id = ? ORDER BY capability",
-    ).bind(workspace.workspaceId).all<{ capability: string }>();
-    const services = await listServiceEntitlements(workspace.workspaceId);
+  if (!workspaces.results.length) return [];
+  const [capabilityResult, serviceResult] = await env.DB.batch([
+    env.DB.prepare(
+      `SELECT wc.workspace_id AS workspaceId, wc.capability
+       FROM workspace_capabilities wc
+       JOIN memberships m ON m.workspace_id = wc.workspace_id
+       WHERE m.user_id = ? ORDER BY wc.workspace_id, wc.capability`,
+    ).bind(userId),
+    env.DB.prepare(
+      `SELECT e.workspace_id AS workspaceId, e.service, e.status,
+        e.activated_at AS activatedAt, e.trial_ends_at AS trialEndsAt,
+        e.suspended_at AS suspendedAt, e.cancelled_at AS cancelledAt,
+        e.updated_at AS updatedAt
+       FROM workspace_service_entitlements e
+       JOIN memberships m ON m.workspace_id = e.workspace_id
+       WHERE m.user_id = ? ORDER BY e.workspace_id, e.activated_at, e.service`,
+    ).bind(userId),
+  ]);
+  const capabilityRows = capabilityResult.results as { workspaceId: string; capability: string }[];
+  const serviceRows = serviceResult.results as ({ workspaceId: string } & ServiceEntitlement)[];
+  return workspaces.results.map((workspace) => {
+    const services = serviceRows.filter((row) => row.workspaceId === workspace.workspaceId);
     return {
       id: workspace.workspaceId,
       name: workspace.name,
       type: isWorkspaceType(workspace.workspaceType) ? workspace.workspaceType : "business_showcase",
       businessCategory: workspace.businessCategory,
-      capabilities: capabilityRows.results.map((row) => row.capability).filter(isCapability),
+      capabilities: capabilityRows.filter((row) => row.workspaceId === workspace.workspaceId).map((row) => row.capability).filter(isCapability),
       services,
       slug: workspace.slug,
       themeId: workspace.themeId,
       role: workspace.role,
     };
-  }));
+  });
 }
 
 export async function selectWorkspace(workspaceId: string, userId: string) {
