@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import type { Capability, WorkspaceType } from "@/src/core/workspaces/model";
 import { hasUsableService, serviceCatalog, type ServiceEntitlement } from "@/src/core/entitlements/model";
 import { loadWorkspace } from "@/lib/client/workspace";
+import { PhaseDeliveryBadge } from "@/components/platform/phase-delivery-badge";
 
 type Summary = { items: number; requests: number; customers: number; unread: number };
 type Item = { id: string; title: string; price: number; status: string; kind: string };
@@ -172,7 +173,7 @@ function OverviewChart({ summary, label }: { summary: Summary; label: string }) 
   const hasActivity = summary.requests > 0;
   return (
     <Card className="overflow-hidden">
-      <div className="flex items-center justify-between border-b border-black/8 px-5 py-4"><div><h2 className="text-sm font-semibold">Business overview</h2><p className="mt-0.5 text-[11px] text-black/40">Customer activity across your website</p></div><button className="rounded-lg border border-black/10 px-2.5 py-1.5 text-[11px] text-black/55">Last 30 days</button></div>
+      <div className="flex items-center justify-between gap-3 border-b border-black/8 px-5 py-4"><div><div className="flex flex-wrap items-center gap-2"><h2 className="text-sm font-semibold">Business overview</h2><PhaseDeliveryBadge phase={17} label="Historical analytics"/></div><p className="mt-0.5 text-[11px] text-black/40">Current activity summary; historical reporting arrives later.</p></div><button disabled title="Date filtering is planned for Phase 17" className="rounded-lg border border-black/10 px-2.5 py-1.5 text-[11px] text-black/35">Last 30 days</button></div>
       <div className="relative h-[210px] px-5 pb-5 pt-4">
         <div className="absolute inset-x-5 bottom-8 top-5 flex flex-col justify-between">{[0, 1, 2, 3].map((line) => <span key={line} className="border-t border-dashed border-black/8" />)}</div>
         <svg viewBox="0 0 700 180" preserveAspectRatio="none" className="relative h-full w-full" aria-label={`${label} activity chart`}>

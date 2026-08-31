@@ -249,6 +249,16 @@ Create the common publishing engine for ecommerce, showcase, CV and portfolio si
 - Re-ran the full definition-of-done gate after the live fixes; TypeScript, lint, architecture contracts, the production Vinext/Cloudflare build and all post-build tests pass.
 - Phase 6 was not started.
 
+## Current development snapshot and unfinished-component disclosure
+
+- Phases 0-5 are complete. The deployed Phase 5 review also fixed builder routing, publish-in-place, page lifecycle actions, navigation placement, real public links and multi-workspace creation/switching.
+- Phases 6-25 remain not started; the existing screens for those areas are foundations or previews and must not imply that their complete workflows already exist.
+- Every visible but unfinished component must show a compact `Planned for Phase X` badge using the delivery phase defined in this plan. Completed components must not display the badge.
+- An unfinished control must be disabled or clearly non-destructive, include an accessible explanation, and must not navigate to a misleading dead-end screen.
+- Editor-document controls such as section duplication, undo/redo, generated settings and recoverable layout operations use `Planned for Phase 8` until Phase 8 passes its definition of done.
+- POS selling workflows use Phase 15, plugin installation uses Phase 16 and historical analytics/filtering uses Phase 17. Future placeholders must use their actual plan phase rather than being labelled Phase 8 indiscriminately.
+- The badge is removed only when the relevant phase definition of done has been tested and marked Complete.
+
 ## Instruction to give Codex
 
 > Start Phase 5 from `MODULO_REVISED_IMPLEMENTATION_PLAN.md`. Complete it fully, test every definition-of-done item, update the phase status and completion record, and do not start Phase 6.

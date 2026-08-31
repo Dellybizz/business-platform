@@ -27,6 +27,7 @@ import {
 import type { SiteSection } from "@/lib/builder/types";
 import { themeStyle } from "@/lib/themes/registry";
 import { BlockEditor } from "@/components/platform/block-editor";
+import { PhaseDeliveryBadge } from "@/components/platform/phase-delivery-badge";
 
 const initial: SiteSection[] = ["hero","features","callout"].flatMap((type,index)=>{
   const definition=sectionRegistry[type],preset=definition?.presets[0];
@@ -326,7 +327,7 @@ export function WebsiteBuilder({pageSlug}:{pageSlug:string}) {
                 }
               />
               <div className="mt-8 flex gap-2 border-t pt-5">
-                <Button variant="outline" className="flex-1 rounded-xl">
+                <Button disabled variant="outline" className="flex-1 rounded-xl" title="Section duplication will be completed in Phase 8">
                   <Copy className="size-4" />
                   Duplicate
                 </Button>
@@ -342,6 +343,7 @@ export function WebsiteBuilder({pageSlug}:{pageSlug:string}) {
                   <Trash2 className="size-4" />
                 </Button>
               </div>
+              <div className="mt-3"><PhaseDeliveryBadge phase={8} label="Section duplication"/></div>
             </>
           ) : (
             <p className="text-sm text-black/40">
