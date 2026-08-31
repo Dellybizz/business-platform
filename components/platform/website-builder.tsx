@@ -1,6 +1,5 @@
 "use client";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
@@ -29,25 +28,25 @@ import type { SiteSection } from "@/lib/builder/types";
 import { themeStyle } from "@/lib/themes/registry";
 import { BlockEditor } from "@/components/platform/block-editor";
 
-const initial: SiteSection[] = [
-  createSection("hero"),
-  createSection("features"),
-  createSection("callout"),
-];
-export function WebsiteBuilder() {
-  const pageSlug = useSearchParams().get("page") || "home";
+const initial: SiteSection[] = ["hero","features","callout"].flatMap((type,index)=>{
+  const definition=sectionRegistry[type],preset=definition?.presets[0];
+  return definition&&preset?[{id:`initial-${index}-${type}`,type,settings:{...definition.defaults,...preset.settings},blocks:[]}]:[];
+});
+export function WebsiteBuilder({pageSlug}:{pageSlug:string}) {
   const [sections, setSections] = useState(initial),
     [active, setActive] = useState(initial[0].id),
     [device, setDevice] = useState<"desktop" | "mobile">("desktop");
   const [themeId, setThemeId] = useState("atelier"),
     [mode, setMode] = useState("store");
+  const [workspaceSlug,setWorkspaceSlug]=useState("");
+  const [published,setPublished]=useState(false);
   const [saveState, setSaveState] = useState<
     "loading" | "saved" | "saving" | "error"
   >("loading");
   const loaded = useRef(false);
   useEffect(() => {
     fetch(`/api/workspace?page=${encodeURIComponent(pageSlug)}`)
-      .then((r) => r.json())
+      .then(async(r) => {const d=await r.json();if(!r.ok)throw new Error(d.error||"Could not load page");return d;})
       .then((d) => {
         if (d.page?.sections?.length) {
           setSections(d.page.sections);
@@ -55,6 +54,7 @@ export function WebsiteBuilder() {
         }
         setThemeId(d.workspace?.themeId || "atelier");
         setMode(d.workspace?.mode || "store");
+        setWorkspaceSlug(d.workspace?.slug||"");
         setSaveState("saved");
         loaded.current = true;
       })
@@ -96,22 +96,22 @@ export function WebsiteBuilder() {
     );
   const publish = async () => {
     setSaveState("saving");
-    await fetch("/api/workspace", {
+    const response=await fetch("/api/workspace", {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ sections, status: "published", pageSlug }),
     });
-    const data = await fetch(`/api/workspace?page=${encodeURIComponent(pageSlug)}`).then((r) => r.json());
-    location.href = data.workspace?.slug
-      ? `/s/${data.workspace.slug}${pageSlug==="home"?"":`/${pageSlug}`}`
-      : "/site";
+    if(!response.ok){setSaveState("error");return;}
+    setSaveState("saved");
+    setPublished(true);
   };
+  const liveHref=workspaceSlug?`/s/${workspaceSlug}${pageSlug==="home"?"":`/${pageSlug}`}`:"";
   return (
     <main className="flex h-screen flex-col overflow-hidden bg-[#eceee9] text-[#1b1d19]">
       <header className="flex h-16 shrink-0 items-center justify-between border-b border-black/10 bg-white px-3 sm:px-5">
         <div className="flex items-center gap-3">
           <Button asChild size="icon" variant="ghost">
-            <Link href="/dashboard">
+            <Link href="/pages">
               <ArrowLeft className="size-4" />
             </Link>
           </Button>
@@ -161,7 +161,7 @@ export function WebsiteBuilder() {
             variant="outline"
             className="hidden rounded-xl sm:flex"
           >
-            <Link href="/site">
+            <Link href={liveHref||"/pages"} target={liveHref?"_blank":undefined}>
               <Eye className="size-4" />
               Preview
             </Link>
@@ -170,6 +170,7 @@ export function WebsiteBuilder() {
             <Save className="size-4" />
             Publish
           </Button>
+          {published&&liveHref?<Button asChild variant="outline" className="rounded-xl"><Link href={liveHref} target="_blank"><Eye className="size-4"/>View live</Link></Button>:null}
         </div>
       </header>
       <div className="grid min-h-0 flex-1 lg:grid-cols-[280px_1fr_310px]">

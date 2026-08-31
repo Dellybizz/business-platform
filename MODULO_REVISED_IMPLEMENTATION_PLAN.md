@@ -245,6 +245,8 @@ Create the common publishing engine for ecommerce, showcase, CV and portfolio si
 - Added public resolution by workspace slug or verified custom domain and retained a shared renderer for ecommerce, showcase, CV and portfolio services.
 - Migrated legacy sites and pages without losing published content, and verified the production D1 backfill for 32 pages, 32 drafts and 3 published versions.
 - Verified Phase 5 with TypeScript, lint, architecture and route contracts, migration tests, production build and the complete post-build test suite.
+- Re-reviewed the deployed workflow and closed the remaining UI integration gaps: Worker-safe builder routing, publish-in-place with a real live link, create/duplicate/publish/unpublish/delete controls, main-menu placement, correct slug-routed navigation and working multi-workspace creation/switching.
+- Re-ran the full definition-of-done gate after the live fixes; TypeScript, lint, architecture contracts, the production Vinext/Cloudflare build and all post-build tests pass.
 - Phase 6 was not started.
 
 ## Instruction to give Codex
