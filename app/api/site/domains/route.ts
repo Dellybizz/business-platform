@@ -1,0 +1,8 @@
+import { env } from "cloudflare:workers";
+import { authorizeWebsite } from "@/src/website/authorization";
+import { writeAuditEvent } from "@/src/core/audit/service";
+import { listDomains,registerDomain,removeDomain } from "@/src/website/resources";
+export async function GET(){try{const ctx=await authorizeWebsite("workspace.read");return Response.json({domains:await listDomains(env.DB,ctx.workspace.id)});}catch(error){return fail(error);}}
+export async function POST(request:Request){try{const ctx=await authorizeWebsite("settings.write"),body=await request.json() as{hostname?:string};if(!body.hostname)return Response.json({error:"Hostname is required"},{status:400});const domain=await registerDomain(env.DB,{workspaceId:ctx.workspace.id,hostname:body.hostname});await writeAuditEvent({workspaceId:ctx.workspace.id,actorUserId:ctx.user.id,action:"domain.registered",targetType:"custom_domain",targetId:domain.id});return Response.json(domain,{status:201});}catch(error){return fail(error);}}
+export async function DELETE(request:Request){try{const ctx=await authorizeWebsite("settings.write"),id=new URL(request.url).searchParams.get("id");if(!id)return Response.json({error:"Domain id is required"},{status:400});const result=await removeDomain(env.DB,ctx.workspace.id,id);await writeAuditEvent({workspaceId:ctx.workspace.id,actorUserId:ctx.user.id,action:"domain.removed",targetType:"custom_domain",targetId:id});return Response.json(result);}catch(error){return fail(error);}}
+function fail(error:unknown){return error instanceof Response?error:Response.json({error:error instanceof Error?error.message:"Unexpected error"},{status:500});}

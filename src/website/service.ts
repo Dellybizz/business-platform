@@ -73,6 +73,36 @@ export async function readDraftPage(db: WebsiteDatabase, workspaceId: string, pa
   return { ...row, indexable: Boolean(row.indexable), document: parsePageDocument(String(row.documentJson)), documentJson: undefined };
 }
 
+export async function listPageVersions(db: WebsiteDatabase, workspaceId: string, pageId: string) {
+  await ownedPage(db, workspaceId, pageId);
+  return (await db.prepare(`SELECT id,version_number AS versionNumber,state,schema_version AS schemaVersion,
+    created_by AS createdBy,created_at AS createdAt,published_at AS publishedAt
+    FROM page_versions WHERE page_id=? ORDER BY version_number DESC`).bind(pageId).all()).results;
+}
+
+export async function rollbackPage(db: WebsiteDatabase, input: {
+  workspaceId: string; pageId: string; versionId: string; actorUserId: string;
+}) {
+  const page = await ownedPage(db, input.workspaceId, input.pageId);
+  const source = await db.prepare(`SELECT id,document_json AS documentJson,schema_version AS schemaVersion,version_number AS versionNumber
+    FROM page_versions WHERE id=? AND page_id=?`).bind(input.versionId,input.pageId).first<{
+      id:string;documentJson:string;schemaVersion:number;versionNumber:number;
+    }>();
+  if (!source) throw new Response("Page version not found", { status: 404 });
+  const document = parsePageDocument(source.documentJson);
+  const draftId = String(page.draft_version_id || "");
+  if (!draftId) throw new Error("Page has no draft version");
+  const now = Date.now();
+  await db.batch([
+    db.prepare("UPDATE page_versions SET document_json=?,schema_version=?,created_by=?,created_at=? WHERE id=? AND state='draft'")
+      .bind(JSON.stringify(document),source.schemaVersion,input.actorUserId,now,draftId),
+    db.prepare("UPDATE pages SET updated_at=? WHERE id=?").bind(now,input.pageId),
+  ]);
+  // Rollback restores a historical snapshot into the mutable draft. The live
+  // published pointer is deliberately unchanged until an explicit publish.
+  return { draftVersionId:draftId,restoredFromVersionId:source.id,restoredFromVersionNumber:source.versionNumber,updatedAt:now };
+}
+
 export async function saveDraft(db: WebsiteDatabase, input: { workspaceId: string; pageId: string; actorUserId: string; document: unknown; title?: string; slug?: string; pageType?: PageType; seo?: PageSeo }) {
   const page = await ownedPage(db,input.workspaceId,input.pageId);
   const document = validatePageDocument(input.document), now = Date.now();

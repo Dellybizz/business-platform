@@ -1,5 +1,7 @@
 # Modular Business Platform — Master Implementation Plan
 
+> **Superseded roadmap:** Phase numbering in this document is retained for historical implementation records. Use `MODULO_REVISED_IMPLEMENTATION_PLAN.md` for all new phase instructions and status tracking.
+
 **Product direction:** Shopify-style shared commerce architecture with WordPress-style modularity.
 
 **Primary service families:**

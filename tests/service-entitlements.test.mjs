@@ -95,16 +95,17 @@ test("navigation and billing settings reflect explicit services", async () => {
 });
 
 test("entitlement enforcement is centralized and applied to service surfaces", async () => {
-  const [service, onlineStore, pos, pages, items, publicRoute] = await Promise.all([
-    source("src/core/entitlements/service.ts"), source("app/online-store/page.tsx"), source("app/pos/page.tsx"),
-    source("app/api/pages/route.ts"), source("app/api/items/route.ts"), source("app/api/public/[slug]/route.ts"),
+  const [service, websiteAuthorization, onlineStore, pos, pages, items, publicRoute] = await Promise.all([
+    source("src/core/entitlements/service.ts"), source("src/website/authorization.ts"), source("app/online-store/page.tsx"),
+    source("app/pos/page.tsx"), source("app/api/pages/route.ts"), source("app/api/items/route.ts"), source("app/api/public/[slug]/route.ts"),
   ]);
   assert.match(service, /requireServiceEntitlement/);
   assert.match(service, /requireAnyServiceEntitlement/);
   assert.match(service, /status: 403/);
   assert.match(onlineStore, /requireServiceEntitlement\(await requireTenant\(\), "ecommerce_website"\)/);
   assert.match(pos, /requireServiceEntitlement\(await requireTenant\(\), "pos"\)/);
-  assert.match(pages, /requireAnyServiceEntitlement/);
+  assert.match(pages, /authorizeWebsite/);
+  assert.match(websiteAuthorization, /requireAnyServiceEntitlement/);
   assert.match(items, /requireAnyServiceEntitlement/);
   assert.match(publicRoute, /workspace_service_entitlements/);
 });

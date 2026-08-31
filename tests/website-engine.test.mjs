@@ -34,6 +34,48 @@ test("page lifecycle keeps draft and live versions isolated",async()=>{
   assert.match(service,/PageDocumentValidationError|validatePageDocument/);
 });
 
+test("page history rollback restores only the draft and remains tenant scoped",async()=>{
+  const [service,historyRoute,rollbackRoute,authorization]=await Promise.all([
+    source("src/website/service.ts"),
+    source("app/api/pages/[pageId]/versions/route.ts"),
+    source("app/api/pages/[pageId]/rollback/route.ts"),
+    source("src/website/authorization.ts"),
+  ]);
+  assert.match(service,/function listPageVersions/);
+  assert.match(service,/function rollbackPage/);
+  assert.match(service,/WHERE id=\? AND page_id=\?/);
+  assert.match(service,/UPDATE page_versions SET document_json=.*state='draft'/);
+  assert.doesNotMatch(service.slice(service.indexOf("export async function rollbackPage"),service.indexOf("export async function saveDraft")),/published_version_id\s*=/);
+  assert.match(historyRoute,/authorizeWebsite\("pages\.read"\)/);
+  assert.match(rollbackRoute,/authorizeWebsite\("pages\.write"\)/);
+  assert.match(rollbackRoute,/page\.rolled_back/);
+  assert.match(authorization,/requireAnyServiceEntitlement/);
+});
+
+test("domains and assets are workspace-owned website resources",async()=>{
+  const [resources,domains,assets]=await Promise.all([
+    source("src/website/resources.ts"),
+    source("app/api/site/domains/route.ts"),
+    source("app/api/site/assets/route.ts"),
+  ]);
+  assert.match(resources,/WHERE workspace_id=\? AND status='active'/);
+  assert.match(resources,/status:'pending'|status:"pending"/);
+  assert.match(resources,/Asset is used by page SEO and cannot be deleted/);
+  for(const route of [domains,assets]){
+    assert.match(route,/authorizeWebsite/);
+    assert.match(route,/writeAuditEvent/);
+  }
+});
+
+test("the revised plan marks only Phase 5 complete and leaves Phase 6 untouched",async()=>{
+  const plan=await source("MODULO_REVISED_IMPLEMENTATION_PLAN.md");
+  const phase5=plan.slice(plan.indexOf("# Phase 5"),plan.indexOf("# Phase 6"));
+  const phase6=plan.slice(plan.indexOf("# Phase 6"),plan.indexOf("# Phase 7"));
+  assert.match(phase5,/\*\*Status:\*\* Complete/);
+  assert.match(phase5,/Completion record - 2026-08-31/);
+  assert.match(phase6,/\*\*Status:\*\* Not started/);
+});
+
 test("public resolution serves published content unless a valid preview token is supplied",async()=>{
   const [service,worker,publicRoute]=await Promise.all([source("src/website/service.ts"),source("worker/index.ts"),source("app/api/public/[slug]/route.ts")]);
   assert.match(service,/published_version_id/);

@@ -1,0 +1,8 @@
+import { env } from "cloudflare:workers";
+import { authorizeWebsite } from "@/src/website/authorization";
+import { writeAuditEvent } from "@/src/core/audit/service";
+import { createAsset,listAssets,removeAsset } from "@/src/website/resources";
+export async function GET(){try{const ctx=await authorizeWebsite("pages.read");return Response.json({assets:await listAssets(env.DB,ctx.workspace.id)});}catch(error){return fail(error);}}
+export async function POST(request:Request){try{const ctx=await authorizeWebsite("pages.write"),body=await request.json() as{storageKey?:string;mimeType?:string;altText?:string};if(!body.storageKey||!body.mimeType)return Response.json({error:"Storage key and MIME type are required"},{status:400});const asset=await createAsset(env.DB,{workspaceId:ctx.workspace.id,storageKey:body.storageKey,mimeType:body.mimeType,altText:body.altText});await writeAuditEvent({workspaceId:ctx.workspace.id,actorUserId:ctx.user.id,action:"asset.created",targetType:"site_asset",targetId:asset.id});return Response.json(asset,{status:201});}catch(error){return fail(error);}}
+export async function DELETE(request:Request){try{const ctx=await authorizeWebsite("pages.write"),id=new URL(request.url).searchParams.get("id");if(!id)return Response.json({error:"Asset id is required"},{status:400});const result=await removeAsset(env.DB,ctx.workspace.id,id);await writeAuditEvent({workspaceId:ctx.workspace.id,actorUserId:ctx.user.id,action:"asset.removed",targetType:"site_asset",targetId:id});return Response.json(result);}catch(error){return fail(error);}}
+function fail(error:unknown){return error instanceof Response?error:Response.json({error:error instanceof Error?error.message:"Unexpected error"},{status:500});}

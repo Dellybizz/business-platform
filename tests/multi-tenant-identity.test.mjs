@@ -38,11 +38,14 @@ test("every protected mutation performs server-side authorization", async () => 
   ];
   for (const file of protectedRoutes) {
     const body = await source(file);
-    assert.match(body, /authorize\(|requirePermission\(|ensureUser\(/, `${file} must authorize on the server`);
+    assert.match(body, /authorize\(|authorizeWebsite\(|requirePermission\(|ensureUser\(/, `${file} must authorize on the server`);
   }
   const service = await source("src/core/authorization/service.ts");
+  const websiteAuthorization = await source("src/website/authorization.ts");
   assert.match(service, /role_permissions/);
   assert.match(service, /throw new Response\("Forbidden", \{ status: 403 \}\)/);
+  assert.match(websiteAuthorization, /authorize\(permission\)/);
+  assert.match(websiteAuthorization, /requireAnyServiceEntitlement/);
 });
 
 test("staff and plugin permissions use separate namespaces and persistence", async () => {
