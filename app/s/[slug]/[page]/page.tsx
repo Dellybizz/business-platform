@@ -1,4 +1,5 @@
 import { PublicSite } from "@/components/platform/public-site";
 import { env } from "cloudflare:workers";
 import { themeStyle } from "@/lib/themes/registry";
-export default async function PublicContentPage({params}:{params:Promise<{slug:string;page:string}>}){const{slug,page}=await params;const workspace=await env.DB.prepare("SELECT theme_id AS themeId FROM workspaces WHERE slug = ?").bind(slug).first<{themeId:string}>();return <div className="tenant-theme" style={themeStyle(workspace?.themeId)}><PublicSite slug={slug} pageSlug={page}/></div>}
+import{resolveThemePresentation}from"@/src/themes/service";
+export default async function PublicContentPage({params,searchParams}:{params:Promise<{slug:string;page:string}>;searchParams:Promise<{themePreview?:string}>}){const{slug,page}=await params,{themePreview}=await searchParams;const workspace=await env.DB.prepare("SELECT id,theme_id AS themeId FROM workspaces WHERE slug = ?").bind(slug).first<{id:string;themeId:string}>();const presentation=workspace?await resolveThemePresentation(env.DB,{workspaceId:workspace.id,fallbackThemeId:workspace.themeId,previewToken:themePreview}):{themeId:"atelier",overrides:{}};return <div className="tenant-theme" data-theme-preview={themePreview?"true":undefined} style={themeStyle(presentation.themeId,presentation.overrides)}><PublicSite slug={slug} pageSlug={page}/></div>}

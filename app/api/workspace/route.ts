@@ -187,7 +187,6 @@ export async function PUT(request: Request) {
     const body = (await request.json()) as {
       name?: string;
       businessCategory?: string;
-      themeId?: string;
       addCapabilities?: unknown[];
       sections?: unknown[];
       status?: string;
@@ -198,21 +197,21 @@ export async function PUT(request: Request) {
     const name = body.name?.trim().slice(0, 100) || null;
     const category = body.businessCategory?.trim().slice(0, 80) || null;
     const categoryWasProvided = body.businessCategory !== undefined;
-    if (name || categoryWasProvided || body.themeId) await requirePermission(ctx, "settings.write");
+    if (name || categoryWasProvided) await requirePermission(ctx, "settings.write");
     if (Array.isArray(body.addCapabilities) && body.addCapabilities.length) await requirePermission(ctx, "capabilities.write");
     if (body.sections) {
       requireAnyServiceEntitlement(ctx, ["ecommerce_website", "business_showcase", "cv", "portfolio"]);
       await requirePermission(ctx, "pages.write");
     }
     if (body.status === "published") await requirePermission(ctx, "pages.publish");
-    if (name || body.businessCategory !== undefined || body.themeId) {
+    if (name || body.businessCategory !== undefined) {
       statements.push(env.DB.prepare(
         `UPDATE workspaces
          SET name = COALESCE(?, name),
            business_category = CASE WHEN ? = 1 THEN ? ELSE business_category END,
-           theme_id = COALESCE(?, theme_id), updated_at = ?
+           updated_at = ?
          WHERE id = ?`,
-      ).bind(name, categoryWasProvided ? 1 : 0, category, body.themeId || null, now, workspaceId));
+      ).bind(name, categoryWasProvided ? 1 : 0, category, now, workspaceId));
     }
     const additions = Array.isArray(body.addCapabilities)
       ? [...new Set(body.addCapabilities.filter(isCapability))]

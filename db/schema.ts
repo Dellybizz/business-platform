@@ -37,6 +37,7 @@ export const workspaces = sqliteTable("workspaces", {
   businessCategory: text("business_category"),
   onboardingKey: text("onboarding_key").unique(),
   themeId: text("theme_id").notNull().default("atelier"),
+  activeThemeVersionId: text("active_theme_version_id"),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
 });
@@ -229,6 +230,20 @@ export const sitePreviewTokens = sqliteTable("site_preview_tokens", {
   createdBy: text("created_by").notNull().references(() => users.id),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
   revokedAt: integer("revoked_at", { mode: "timestamp_ms" }),
+});
+
+export const siteThemeVersions = sqliteTable("site_theme_versions", {
+  id: text("id").primaryKey(), workspaceId: text("workspace_id").notNull().references(() => workspaces.id),
+  themeId: text("theme_id").notNull(), themeVersion: integer("theme_version").notNull(),
+  tokenOverridesJson: text("token_overrides_json").notNull().default("{}"), state: text("state").notNull().default("active"),
+  createdBy: text("created_by").references(() => users.id), createdAt: integer("created_at",{mode:"timestamp_ms"}).notNull(), activatedAt: integer("activated_at",{mode:"timestamp_ms"}).notNull(),
+});
+
+export const siteThemePreviews = sqliteTable("site_theme_previews", {
+  id: text("id").primaryKey(), workspaceId: text("workspace_id").notNull().references(() => workspaces.id),
+  themeId: text("theme_id").notNull(), themeVersion: integer("theme_version").notNull(), tokenOverridesJson: text("token_overrides_json").notNull().default("{}"),
+  tokenHash: text("token_hash").notNull().unique(), expiresAt: integer("expires_at",{mode:"timestamp_ms"}).notNull(),
+  createdBy: text("created_by").notNull().references(() => users.id), createdAt: integer("created_at",{mode:"timestamp_ms"}).notNull(),
 });
 
 export const contentItems = sqliteTable("content_items", {

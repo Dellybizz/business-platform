@@ -16,9 +16,9 @@
 
 ## Current verified status
 
-- Phases 0-6: Complete.
-- Phase 7: Next phase.
-- Phases 7-25: Not started.
+- Phases 0-7: Complete.
+- Phase 8: Next phase.
+- Phases 8-25: Not started.
 
 ## Product rules
 
@@ -42,7 +42,7 @@
 | 4 | Service catalogue, opt-in and entitlements | Build now | Complete |
 | 5 | Website engine and versioned page data | Build now | Complete |
 | 6 | Automatic component and extension registry | Build now | Complete |
-| 7 | Themes, layouts and content-safe versioning | Build now | Not started |
+| 7 | Themes, layouts and content-safe versioning | Build now | Complete |
 | 8 | Shared editor document model | Build now | Not started |
 | 9 | Guided ecommerce builder | Build now | Not started |
 | 10 | Advanced ecommerce visual editor | Build now | Not started |
@@ -313,7 +313,7 @@ Review Phase 6 against its definition of done. Fix anything incomplete. If every
 
 # Phase 7 - Themes, layouts and content-safe versioning
 
-**Status:** Not started
+**Status:** Complete
 
 **Delivery stage:** Build now
 
@@ -334,6 +334,18 @@ Separate visual presentation from merchant data and establish layout presets for
 - Theme changes never delete content.
 - Preview does not affect the live site.
 - Layouts use registered components and dynamic data sources.
+
+## Completion record - 2026-09-01
+
+- Replaced the hard-coded palette map with build-time-discovered, typed theme manifests containing global tokens, style presets, layouts, versions and data-role declarations.
+- Added initial Ecommerce, Showcase, CV and Portfolio theme families whose layout templates reference Phase 6 registered components.
+- Added explicit dynamic roles for products, collections, services, projects and CV data, plus validation that layout component references exist.
+- Added versioned theme activation history, token overrides, sequential migrations, expiry-bounded hashed preview tokens and content-safe rollback.
+- Added an isolated preview flow that resolves preview presentation per request without updating the live workspace theme.
+- Updated the theme gallery with separate Preview and Activate actions plus activation-history rollback; direct workspace theme mutation is no longer accepted.
+- Added the Phase 7 D1 migration and legacy-theme backfill. Theme writes affect only theme-version and workspace presentation records, never page documents or merchant content.
+- Verified all three Phase 7 definition-of-done conditions with dedicated tests, TypeScript, lint, architecture contracts, production build and the complete post-build suite.
+- Phase 8 was not started.
 
 ## Instruction to give Codex
 
