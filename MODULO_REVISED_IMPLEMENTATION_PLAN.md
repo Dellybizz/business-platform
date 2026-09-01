@@ -16,9 +16,9 @@
 
 ## Current verified status
 
-- Phases 0-7: Complete.
-- Phase 8: Next phase.
-- Phases 8-25: Not started.
+- Phases 0-8: Complete.
+- Phase 9: Next phase.
+- Phases 9-25: Not started.
 
 ## Product rules
 
@@ -43,7 +43,7 @@
 | 5 | Website engine and versioned page data | Build now | Complete |
 | 6 | Automatic component and extension registry | Build now | Complete |
 | 7 | Themes, layouts and content-safe versioning | Build now | Complete |
-| 8 | Shared editor document model | Build now | Not started |
+| 8 | Shared editor document model | Build now | Complete |
 | 9 | Guided ecommerce builder | Build now | Not started |
 | 10 | Advanced ecommerce visual editor | Build now | Not started |
 | 11 | CV, portfolio and showcase builders | Build now | Not started |
@@ -345,7 +345,7 @@ Separate visual presentation from merchant data and establish layout presets for
 - Updated the theme gallery with separate Preview and Activate actions plus activation-history rollback; direct workspace theme mutation is no longer accepted.
 - Added the Phase 7 D1 migration and legacy-theme backfill. Theme writes affect only theme-version and workspace presentation records, never page documents or merchant content.
 - Verified all three Phase 7 definition-of-done conditions with dedicated tests, TypeScript, lint, architecture contracts, production build and the complete post-build suite.
-- Phase 8 was not started.
+- Phase 8 was completed separately; Phase 9 was not started.
 
 ## Instruction to give Codex
 
@@ -357,7 +357,7 @@ Review Phase 7 against its definition of done. Fix anything incomplete. If every
 
 # Phase 8 - Shared editor document model
 
-**Status:** Not started
+**Status:** Complete
 
 **Delivery stage:** Build now
 
@@ -380,6 +380,18 @@ Create one document engine that supports Guided and Advanced editing without cre
 - Refresh restores the latest valid draft.
 - Failed saves cannot destroy a valid version.
 - Layout replacement always creates a recoverable backup.
+
+## Completion record - 2026-09-01
+
+- Upgraded page documents to schema version 2 with one shared model for Guided and Advanced modes, recursive sections/blocks, dynamic data sources, responsive styles and global tokens.
+- Added transparent migration of schema-version-1 documents and safe editor-level transitions.
+- Reworked the editor to load and autosave the complete validated document, with Save, Publish and isolated draft Preview operations.
+- Added bounded undo/redo history, insertion, duplication, removal and keyboard-accessible reorder controls generated from manifests.
+- Added atomic validation-before-write autosaves and recovery of the latest valid snapshot during refresh.
+- Added atomic layout replacement with mandatory pre-replacement backup, backup listing and recoverable restore.
+- Added the Phase 8 D1 migration and baseline backups for existing drafts.
+- Verified every Phase 8 definition-of-done item with dedicated tests, TypeScript, lint, architecture contracts, production build and the full post-build suite.
+- Phase 9 was not started.
 
 ## Instruction to give Codex
 

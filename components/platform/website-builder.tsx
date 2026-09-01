@@ -12,9 +12,11 @@ import {
   Monitor,
   Palette,
   Plus,
+  Redo2,
   Save,
   Smartphone,
   Trash2,
+  Undo2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,22 +27,28 @@ import {
 import type { SiteSection } from "@/lib/builder/types";
 import { themeStyle } from "@/lib/themes/registry";
 import { BlockEditor } from "@/components/platform/block-editor";
-import { PhaseDeliveryBadge } from "@/components/platform/phase-delivery-badge";
 import {RegisteredSectionRenderer} from "@/lib/builder/registered-renderer";
 import {ManifestField} from "@/components/platform/manifest-field";
 import type {SettingValue} from "@/lib/builder/types";
+import type{PageDocument,PageSection}from"@/src/website/page-document";
+import{useEditorDocument}from"@/lib/editor/use-editor-document";
+import{duplicateSection,insertSection,removeSection,reorderSection}from"@/lib/editor/document-state";
 
-const initial: SiteSection[] = ["hero","features","callout"].flatMap((type,index)=>{
+const initialSections: SiteSection[] = ["hero","features","callout"].flatMap((type,index)=>{
   const definition=sectionRegistry[type],preset=definition?.presets[0];
   return definition&&preset?[{id:`initial-${index}-${type}`,type,settings:{...definition.defaults,...preset.settings},blocks:[]}]:[];
 });
+const initial:PageDocument={schemaVersion:2,editorMode:"advanced",dataSources:{},globalTokens:{},sections:initialSections as PageSection[]};
 export function WebsiteBuilder({pageSlug}:{pageSlug:string}) {
-  const [sections, setSections] = useState(initial),
-    [active, setActive] = useState(initial[0].id),
+  const{document,setDocument,resetDocument,undo,redo,canUndo,canRedo}=useEditorDocument(initial);
+  const sections=document.sections as SiteSection[];
+  const setSections=(next:SiteSection[]|((current:SiteSection[])=>SiteSection[]))=>setDocument(current=>({...current,sections:(typeof next==="function"?next(current.sections as SiteSection[]):next)as PageSection[]}));
+  const [active, setActive] = useState(initialSections[0].id),
     [device, setDevice] = useState<"desktop" | "mobile">("desktop");
   const [themeId, setThemeId] = useState("atelier"),
     [mode, setMode] = useState("store");
   const [workspaceSlug,setWorkspaceSlug]=useState("");
+  const [pageId,setPageId]=useState("");
   const [published,setPublished]=useState(false);
   const [saveState, setSaveState] = useState<
     "loading" | "saved" | "saving" | "error"
@@ -50,9 +58,10 @@ export function WebsiteBuilder({pageSlug}:{pageSlug:string}) {
     fetch(`/api/workspace?page=${encodeURIComponent(pageSlug)}`)
       .then(async(r) => {const d=await r.json();if(!r.ok)throw new Error(d.error||"Could not load page");return d;})
       .then((d) => {
-        if (d.page?.sections?.length) {
-          setSections(d.page.sections);
-          setActive(d.page.sections[0].id);
+        if (d.page?.document) {
+          resetDocument(d.page.document);
+          setActive(d.page.document.sections[0]?.id||"");
+          setPageId(d.page.id);
         }
         setThemeId(d.workspace?.themeId || "atelier");
         setMode(d.workspace?.mode || "store");
@@ -61,15 +70,15 @@ export function WebsiteBuilder({pageSlug}:{pageSlug:string}) {
         loaded.current = true;
       })
       .catch(() => setSaveState("error"));
-  }, [pageSlug]);
+  }, [pageSlug,resetDocument]);
   useEffect(() => {
     if (!loaded.current) return;
     setSaveState("saving");
     const timer = setTimeout(() => {
-      fetch("/api/workspace", {
-        method: "PUT",
+      fetch(`/api/pages/${pageId}`, {
+        method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ sections, pageSlug }),
+        body: JSON.stringify({document}),
       })
         .then((r) => {
           if (!r.ok) throw new Error();
@@ -78,15 +87,11 @@ export function WebsiteBuilder({pageSlug}:{pageSlug:string}) {
         .catch(() => setSaveState("error"));
     }, 600);
     return () => clearTimeout(timer);
-  }, [sections, pageSlug]);
+  }, [document,pageId]);
   const current = sections.find((s) => s.id === active),
     def = current ? sectionRegistry[current.type] : null;
   const move = (index: number, dir: number) => {
-    const next = [...sections],
-      target = index + dir;
-    if (target < 0 || target >= next.length) return;
-    [next[index], next[target]] = [next[target], next[index]];
-    setSections(next);
+    const section=sections[index];if(section)setDocument(current=>reorderSection(current,section.id,dir as -1|1));
   };
   const update = (key: string, value: SettingValue) =>
     setSections((x) =>
@@ -96,17 +101,16 @@ export function WebsiteBuilder({pageSlug}:{pageSlug:string}) {
           : s,
       ),
     );
+  const saveNow=async()=>{if(!pageId)return false;setSaveState("saving");const response=await fetch(`/api/pages/${pageId}`,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({document})});setSaveState(response.ok?"saved":"error");return response.ok};
   const publish = async () => {
-    setSaveState("saving");
-    const response=await fetch("/api/workspace", {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ sections, status: "published", pageSlug }),
-    });
+    if(!pageId||!await saveNow())return;
+    const response=await fetch(`/api/pages/${pageId}/publish`, {method:"POST",headers:{"content-type":"application/json"}});
     if(!response.ok){setSaveState("error");return;}
     setSaveState("saved");
     setPublished(true);
   };
+  const preview=async()=>{if(!pageId||!workspaceSlug||!await saveNow())return;const response=await fetch(`/api/pages/${pageId}/preview`,{method:"POST"}),data=await response.json();if(!response.ok){setSaveState("error");return}window.open(`${liveHref}?preview=${encodeURIComponent(data.token)}`,"_blank","noopener,noreferrer")};
+  const changeMode=async(mode:"guided"|"advanced")=>{if(!pageId||!await saveNow())return;const response=await fetch(`/api/pages/${pageId}/editor-mode`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({mode})});if(!response.ok){setSaveState("error");return}setDocument(current=>({...current,editorMode:mode}))};
   const liveHref=workspaceSlug?`/s/${workspaceSlug}${pageSlug==="home"?"":`/${pageSlug}`}`:"";
   return (
     <main className="flex h-screen flex-col overflow-hidden bg-[#eceee9] text-[#1b1d19]">
@@ -147,6 +151,9 @@ export function WebsiteBuilder({pageSlug}:{pageSlug:string}) {
           </button>
         </div>
         <div className="flex gap-2">
+          <select aria-label="Editor level" value={document.editorMode} onChange={event=>changeMode(event.target.value as "guided"|"advanced")} className="rounded-xl border bg-white px-3 text-sm"><option value="guided">Guided</option><option value="advanced">Advanced</option></select>
+          <Button onClick={undo} disabled={!canUndo} variant="outline" size="icon" aria-label="Undo last change"><Undo2 className="size-4"/></Button>
+          <Button onClick={redo} disabled={!canRedo} variant="outline" size="icon" aria-label="Redo last change"><Redo2 className="size-4"/></Button>
           <Button
             asChild
             variant="outline"
@@ -158,16 +165,11 @@ export function WebsiteBuilder({pageSlug}:{pageSlug:string}) {
               <span className="hidden sm:inline">Themes</span>
             </Link>
           </Button>
-          <Button
-            asChild
-            variant="outline"
-            className="hidden rounded-xl sm:flex"
-          >
-            <Link href={liveHref||"/pages"} target={liveHref?"_blank":undefined}>
+          <Button onClick={preview} variant="outline" className="hidden rounded-xl sm:flex">
               <Eye className="size-4" />
               Preview
-            </Link>
           </Button>
+          <Button onClick={saveNow} variant="outline" className="rounded-xl"><Save className="size-4"/><span className="hidden sm:inline">Save</span></Button>
           <Button onClick={publish} className="rounded-xl bg-[#173a2b]">
             <Save className="size-4" />
             Publish
@@ -185,36 +187,45 @@ export function WebsiteBuilder({pageSlug}:{pageSlug:string}) {
             {sections.map((s, i) => {
               const registered = sectionRegistry[s.type];
               return (
-                <button
+                <div
                   key={s.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => setActive(s.id)}
+                  onKeyDown={event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();setActive(s.id)}}}
                   className={`group flex w-full items-center gap-2 rounded-xl border p-3 text-left ${active === s.id ? "border-[#173a2b] bg-[#eff5f1]" : "border-black/8"}`}
                 >
                   <GripVertical className="size-4 text-black/25" />
                   <span className="flex-1 text-sm font-medium">
                     {registered?.name || "Unavailable section"}
                   </span>
-                  <span className="flex gap-0.5 opacity-0 group-hover:opacity-100">
-                    <span
+                  <span className="flex gap-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100">
+                    <button
+                      type="button"
+                      aria-label={`Move ${registered?.name||"section"} up`}
+                      disabled={i===0}
                       onClick={(e) => {
                         e.stopPropagation();
                         move(i, -1);
                       }}
-                      className="p-1"
+                      className="p-1 disabled:opacity-30"
                     >
                       <ChevronUp className="size-3" />
-                    </span>
-                    <span
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Move ${registered?.name||"section"} down`}
+                      disabled={i===sections.length-1}
                       onClick={(e) => {
                         e.stopPropagation();
                         move(i, 1);
                       }}
-                      className="p-1"
+                      className="p-1 disabled:opacity-30"
                     >
                       <ChevronDown className="size-3" />
-                    </span>
+                    </button>
                   </span>
-                </button>
+                </div>
               );
             })}
           </div>
@@ -228,7 +239,7 @@ export function WebsiteBuilder({pageSlug}:{pageSlug:string}) {
                   key={`${d.type}-${preset.name}`}
                   onClick={() => {
                     const s = createSection(d.type, presetIndex);
-                    setSections((x) => [...x, s]);
+                    setDocument(current=>insertSection(current,s as PageSection));
                     setActive(s.id);
                   }}
                   className="flex w-full items-center gap-3 rounded-xl border border-dashed border-black/15 p-3 text-left hover:bg-[#f7f7f4]"
@@ -299,13 +310,13 @@ export function WebsiteBuilder({pageSlug}:{pageSlug:string}) {
                 }
               />
               <div className="mt-8 flex gap-2 border-t pt-5">
-                <Button disabled variant="outline" className="flex-1 rounded-xl" title="Section duplication will be completed in Phase 8">
+                <Button onClick={()=>{setDocument(value=>duplicateSection(value,active));}} variant="outline" className="flex-1 rounded-xl">
                   <Copy className="size-4" />
                   Duplicate
                 </Button>
                 <Button
                   onClick={() => {
-                    setSections((x) => x.filter((s) => s.id !== active));
+                    setDocument(value=>removeSection(value,active));
                     setActive(sections.find((s) => s.id !== active)?.id || "");
                   }}
                   variant="outline"
@@ -315,7 +326,6 @@ export function WebsiteBuilder({pageSlug}:{pageSlug:string}) {
                   <Trash2 className="size-4" />
                 </Button>
               </div>
-              <div className="mt-3"><PhaseDeliveryBadge phase={8} label="Section duplication"/></div>
             </>
           ) : (
             <p className="text-sm text-black/40">

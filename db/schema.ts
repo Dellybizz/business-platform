@@ -184,6 +184,9 @@ export const pageVersions = sqliteTable("page_versions", {
   publishedAt: integer("published_at", { mode: "timestamp_ms" }),
 }, (table) => [uniqueIndex("page_versions_page_number_unique").on(table.pageId, table.versionNumber)]);
 
+export const pageDocumentBackups=sqliteTable("page_document_backups",{id:text("id").primaryKey(),pageId:text("page_id").notNull().references(()=>pages.id),documentJson:text("document_json").notNull(),schemaVersion:integer("schema_version").notNull(),reason:text("reason").notNull(),createdBy:text("created_by").notNull(),createdAt:integer("created_at",{mode:"timestamp_ms"}).notNull()});
+export const pageAutosaves=sqliteTable("page_autosaves",{id:text("id").primaryKey(),pageId:text("page_id").notNull().references(()=>pages.id),documentJson:text("document_json").notNull(),schemaVersion:integer("schema_version").notNull(),createdBy:text("created_by").notNull(),createdAt:integer("created_at",{mode:"timestamp_ms"}).notNull()});
+
 export const navigationMenus = sqliteTable("navigation_menus", {
   id: text("id").primaryKey(),
   siteId: text("site_id").notNull().references(() => sites.id),

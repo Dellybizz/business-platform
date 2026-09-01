@@ -3,6 +3,7 @@ import {normalizeRegisteredPageDocument} from "@/lib/builder/document-normalizat
 import {
   documentFromLegacySections,
   parsePageDocument,
+  transitionEditorMode,
   validatePageDocument,
   type PageType,
 } from "./page-document";
@@ -50,7 +51,7 @@ export async function createPage(db: WebsiteDatabase, input: {
     db.prepare(`INSERT INTO pages (id,workspace_id,site_id,slug,title,status,sections_json,page_type,template_key,draft_version_id,indexable,created_at,updated_at)
       VALUES (?,?,?,?,?,'draft','[]',?,?,?,1,?,?)`).bind(pageId,input.workspace.id,siteId,slug,title,pageType,input.templateKey||null,versionId,now,now),
     db.prepare(`INSERT INTO page_versions (id,page_id,version_number,state,schema_version,document_json,created_by,created_at)
-      VALUES (?,?,1,'draft',1,?,?,?)`).bind(versionId,pageId,JSON.stringify(document),input.actorUserId,now),
+      VALUES (?,?,1,'draft',?,?,?,?)`).bind(versionId,pageId,document.schemaVersion,JSON.stringify(document),input.actorUserId,now),
   ]);
   return { id: pageId, slug, draftVersionId: versionId };
 }
@@ -71,7 +72,10 @@ export async function readDraftPage(db: WebsiteDatabase, workspaceId: string, pa
       id:string;title:string;slug:string;pageType:string;templateKey:string|null;seoTitle:string|null;seoDescription:string|null;canonicalUrl:string|null;socialImageAssetId:string|null;indexable:number;versionId:string;documentJson:string;versionNumber:number;
     }>();
   if (!row) throw new Response("Draft not found", { status: 404 });
-  return { ...row, indexable: Boolean(row.indexable), document: normalizeRegisteredPageDocument(parsePageDocument(String(row.documentJson))), documentJson: undefined };
+  let document;
+  try { document=normalizeRegisteredPageDocument(parsePageDocument(String(row.documentJson))); }
+  catch { const autosaves=await db.prepare("SELECT document_json AS documentJson FROM page_autosaves WHERE page_id=? ORDER BY created_at DESC").bind(pageId).all<{documentJson:string}>();for(const autosave of autosaves.results){try{document=normalizeRegisteredPageDocument(parsePageDocument(String(autosave.documentJson)));break}catch{}}if(!document)throw new Error("No valid draft snapshot is available") }
+  return { ...row, indexable: Boolean(row.indexable), document, documentJson: undefined };
 }
 
 export async function listPageVersions(db: WebsiteDatabase, workspaceId: string, pageId: string) {
@@ -96,7 +100,7 @@ export async function rollbackPage(db: WebsiteDatabase, input: {
   const now = Date.now();
   await db.batch([
     db.prepare("UPDATE page_versions SET document_json=?,schema_version=?,created_by=?,created_at=? WHERE id=? AND state='draft'")
-      .bind(JSON.stringify(document),source.schemaVersion,input.actorUserId,now,draftId),
+      .bind(JSON.stringify(document),document.schemaVersion,input.actorUserId,now,draftId),
     db.prepare("UPDATE pages SET updated_at=? WHERE id=?").bind(now,input.pageId),
   ]);
   // Rollback restores a historical snapshot into the mutable draft. The live
@@ -112,8 +116,9 @@ export async function saveDraft(db: WebsiteDatabase, input: { workspaceId: strin
   const slug = input.slug === undefined ? null : cleanSlug(input.slug);
   if (input.pageType && !allowedPageTypes.has(input.pageType)) throw new Error("Unsupported page type");
   await db.batch([
-    db.prepare("UPDATE page_versions SET document_json=?,schema_version=1,created_by=?,created_at=? WHERE id=? AND state='draft'")
-      .bind(JSON.stringify(document),input.actorUserId,now,draftId),
+    db.prepare("INSERT INTO page_autosaves (id,page_id,document_json,schema_version,created_by,created_at) VALUES (?,?,?,?,?,?)").bind(crypto.randomUUID(),input.pageId,JSON.stringify(document),document.schemaVersion,input.actorUserId,now),
+    db.prepare("UPDATE page_versions SET document_json=?,schema_version=?,created_by=?,created_at=? WHERE id=? AND state='draft'")
+      .bind(JSON.stringify(document),document.schemaVersion,input.actorUserId,now,draftId),
     db.prepare(`UPDATE pages SET title=COALESCE(?,title),slug=COALESCE(?,slug),page_type=COALESCE(?,page_type),
       seo_title=COALESCE(?,seo_title),seo_description=COALESCE(?,seo_description),canonical_url=COALESCE(?,canonical_url),
       social_image_asset_id=COALESCE(?,social_image_asset_id),indexable=COALESCE(?,indexable),updated_at=? WHERE id=?`)
@@ -121,6 +126,11 @@ export async function saveDraft(db: WebsiteDatabase, input: { workspaceId: strin
   ]);
   return { draftVersionId: draftId, updatedAt: now };
 }
+
+export async function replacePageLayout(db:WebsiteDatabase,input:{workspaceId:string;pageId:string;actorUserId:string;document:unknown}){const page=await ownedPage(db,input.workspaceId,input.pageId),document=normalizeRegisteredPageDocument(validatePageDocument(input.document)),draftId=String(page.draft_version_id||"");if(!draftId)throw new Error("Page has no draft version");const current=await db.prepare("SELECT document_json AS documentJson,schema_version AS schemaVersion FROM page_versions WHERE id=? AND state='draft'").bind(draftId).first<{documentJson:string;schemaVersion:number}>();if(!current)throw new Error("Valid draft not found");parsePageDocument(current.documentJson);const now=Date.now(),backupId=crypto.randomUUID();await db.batch([db.prepare("INSERT INTO page_document_backups (id,page_id,document_json,schema_version,reason,created_by,created_at) VALUES (?,?,?,?,?,?,?)").bind(backupId,input.pageId,current.documentJson,current.schemaVersion,"layout-replacement",input.actorUserId,now),db.prepare("UPDATE page_versions SET document_json=?,schema_version=?,created_by=?,created_at=? WHERE id=? AND state='draft'").bind(JSON.stringify(document),document.schemaVersion,input.actorUserId,now,draftId)]);return{backupId,draftVersionId:draftId,updatedAt:now}}
+export async function changeEditorMode(db:WebsiteDatabase,input:{workspaceId:string;pageId:string;actorUserId:string;mode:"guided"|"advanced"}){const draft=await readDraftPage(db,input.workspaceId,input.pageId),document=transitionEditorMode(draft.document,input.mode);return saveDraft(db,{workspaceId:input.workspaceId,pageId:input.pageId,actorUserId:input.actorUserId,document})}
+export async function listPageBackups(db:WebsiteDatabase,workspaceId:string,pageId:string){await ownedPage(db,workspaceId,pageId);return(await db.prepare("SELECT id,reason,schema_version AS schemaVersion,created_at AS createdAt FROM page_document_backups WHERE page_id=? ORDER BY created_at DESC").bind(pageId).all()).results}
+export async function restorePageBackup(db:WebsiteDatabase,input:{workspaceId:string;pageId:string;actorUserId:string;backupId:string}){const page=await ownedPage(db,input.workspaceId,input.pageId),backup=await db.prepare("SELECT document_json AS documentJson FROM page_document_backups WHERE id=? AND page_id=?").bind(input.backupId,input.pageId).first<{documentJson:string}>();if(!backup)throw new Response("Backup not found",{status:404});const document=normalizeRegisteredPageDocument(parsePageDocument(backup.documentJson)),draftId=String(page.draft_version_id||""),current=await db.prepare("SELECT document_json AS documentJson,schema_version AS schemaVersion FROM page_versions WHERE id=? AND state='draft'").bind(draftId).first<{documentJson:string;schemaVersion:number}>();if(!current)throw new Error("Valid draft not found");const now=Date.now();await db.batch([db.prepare("INSERT INTO page_document_backups (id,page_id,document_json,schema_version,reason,created_by,created_at) VALUES (?,?,?,?,?,?,?)").bind(crypto.randomUUID(),input.pageId,current.documentJson,current.schemaVersion,"before-backup-restore",input.actorUserId,now),db.prepare("UPDATE page_versions SET document_json=?,schema_version=?,created_by=?,created_at=? WHERE id=? AND state='draft'").bind(JSON.stringify(document),document.schemaVersion,input.actorUserId,now,draftId)]);return{draftVersionId:draftId,restoredBackupId:input.backupId,updatedAt:now}}
 
 export async function publishPage(db: WebsiteDatabase, input: { workspaceId: string; pageId: string; actorUserId: string }) {
   const page = await ownedPage(db,input.workspaceId,input.pageId);
@@ -132,8 +142,8 @@ export async function publishPage(db: WebsiteDatabase, input: { workspaceId: str
   const version=Number(max?.value||0)+1;
   await db.batch([
     db.prepare("UPDATE page_versions SET state='archived' WHERE page_id=? AND state='published'").bind(input.pageId),
-    db.prepare("INSERT INTO page_versions (id,page_id,version_number,state,schema_version,document_json,created_by,created_at,published_at) VALUES (?,?,?,'published',1,?,?,?,?)")
-      .bind(publishedId,input.pageId,version,JSON.stringify(normalized),input.actorUserId,now,now),
+    db.prepare("INSERT INTO page_versions (id,page_id,version_number,state,schema_version,document_json,created_by,created_at,published_at) VALUES (?,?,?,'published',?,?,?,?,?)")
+      .bind(publishedId,input.pageId,version,normalized.schemaVersion,JSON.stringify(normalized),input.actorUserId,now,now),
     db.prepare("UPDATE page_versions SET id=id WHERE id=? AND state='draft'").bind(String(page.draft_version_id)),
     db.prepare("UPDATE pages SET status='published',published_version_id=?,updated_at=? WHERE id=?").bind(publishedId,now,input.pageId),
   ]);

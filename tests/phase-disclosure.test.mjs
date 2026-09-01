@@ -10,16 +10,17 @@ test("unfinished components disclose their actual delivery phase",async()=>{
   const modules=await read("components/platform/admin-module-page.tsx");
   const dashboard=await read("components/platform/dashboard.tsx");
   assert.match(badge,/Planned for Phase/);
-  assert.match(builder,/PhaseDeliveryBadge phase=\{8\}/);
-  assert.match(builder,/disabled variant="outline"/);
+  assert.doesNotMatch(builder,/PhaseDeliveryBadge phase=\{8\}/);
+  assert.match(builder,/duplicateSection/);
+  assert.match(builder,/Undo last change/);
   assert.match(modules,/PhaseDeliveryBadge phase=\{15\}/);
   assert.match(modules,/PhaseDeliveryBadge phase=\{16\}/);
   assert.match(dashboard,/PhaseDeliveryBadge phase=\{17\}/);
 });
 
-test("the plan defines disclosure without starting Phase 8",async()=>{
+test("the plan defines disclosure without starting Phase 9",async()=>{
   const plan=await read("MODULO_REVISED_IMPLEMENTATION_PLAN.md");
   assert.match(plan,/Current development snapshot and unfinished-component disclosure/);
   assert.match(plan,/Completed components must not display the badge/);
-  assert.match(plan,/# Phase 8[\s\S]*?\*\*Status:\*\* Not started/);
+  assert.match(plan,/# Phase 9[\s\S]*?\*\*Status:\*\* Not started/);
 });

@@ -47,7 +47,7 @@ export async function GET(request: Request) {
             ...page,
             status: pageRecord?.status,
             sections: page.document.sections,
-            document: undefined,
+            document: page.document,
           }
         : null,
       summary: {
@@ -138,7 +138,7 @@ export async function POST(request: Request) {
         "INSERT INTO pages (id,workspace_id,site_id,slug,title,status,sections_json,page_type,draft_version_id,indexable,created_at,updated_at) VALUES (?,?,?,?,?,'draft',?, ?,?,1,?,?)",
       ).bind(
         pageId,id,siteId,page.slug,page.title,JSON.stringify(starterSectionsFor(input.type,page)),page.slug==='home'?'home':page.slug==='contact'?'contact':'standard',versionId,now,now,
-      ),env.DB.prepare("INSERT INTO page_versions (id,page_id,version_number,state,schema_version,document_json,created_by,created_at) VALUES (?,?,1,'draft',1,?,?,?)").bind(versionId,pageId,JSON.stringify(documentFromLegacySections(starterSectionsFor(input.type,page))),identity.id,now)]),
+      ),env.DB.prepare("INSERT INTO page_versions (id,page_id,version_number,state,schema_version,document_json,created_by,created_at) VALUES (?,?,1,'draft',2,?,?,?)").bind(versionId,pageId,JSON.stringify(documentFromLegacySections(starterSectionsFor(input.type,page))),identity.id,now)]),
     ];
     try {
       await env.DB.batch(statements);

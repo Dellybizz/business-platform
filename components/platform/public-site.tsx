@@ -35,7 +35,7 @@ const copy = {
     icon: BriefcaseBusiness,
   },
 } as const;
-export function PublicSite({ slug, pageSlug="home" }: { slug: string; pageSlug?:string }) {
+export function PublicSite({ slug, pageSlug="home",previewToken }: { slug: string; pageSlug?:string;previewToken?:string }) {
   const [data, setData] = useState<{
       workspace: { name: string; mode: keyof typeof copy };
       page: { title:string; sections: SiteSection[]; seo?:{title?:string|null;description?:string|null;indexable?:boolean} };
@@ -46,14 +46,14 @@ export function PublicSite({ slug, pageSlug="home" }: { slug: string; pageSlug?:
     [sent, setSent] = useState(false),
     [error, setError] = useState("");
   useEffect(() => {
-    fetch(`/api/public/${slug}?page=${encodeURIComponent(pageSlug)}`)
+    fetch(`/api/public/${slug}?page=${encodeURIComponent(pageSlug)}${previewToken?`&preview=${encodeURIComponent(previewToken)}`:""}`)
       .then(async (r) => {
         const d = await r.json();
         if (!r.ok) throw new Error(d.error);
         setData(d);
       })
       .catch((e) => setError(e.message));
-  }, [slug, pageSlug]);
+  }, [slug, pageSlug,previewToken]);
   useEffect(()=>{if(!data)return;document.title=data.page.seo?.title||data.page.title||data.workspace.name;let meta=document.querySelector<HTMLMetaElement>('meta[name="description"]');if(!meta){meta=document.createElement("meta");meta.name="description";document.head.append(meta);}meta.content=data.page.seo?.description||"";let robots=document.querySelector<HTMLMetaElement>('meta[name="robots"]');if(!robots){robots=document.createElement("meta");robots.name="robots";document.head.append(robots);}robots.content=data.page.seo?.indexable===false?"noindex,nofollow":"index,follow";},[data]);
   if (error)
     return (
