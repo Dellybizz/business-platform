@@ -1,4 +1,5 @@
 import { sha256 } from "@/src/core/identity/crypto";
+import {normalizeRegisteredPageDocument} from "@/lib/builder/document-normalization";
 import {
   documentFromLegacySections,
   parsePageDocument,
@@ -44,7 +45,7 @@ export async function createPage(db: WebsiteDatabase, input: {
   const siteId = await ensureSite(db, input.workspace);
   const pageId = crypto.randomUUID(), versionId = crypto.randomUUID(), now = Date.now();
   const slug = cleanSlug(input.slug || title) || `page-${pageId.slice(0, 8)}`;
-  const document = input.document ? validatePageDocument(input.document) : documentFromLegacySections([]);
+  const document = normalizeRegisteredPageDocument(input.document ? validatePageDocument(input.document) : documentFromLegacySections([]));
   await db.batch([
     db.prepare(`INSERT INTO pages (id,workspace_id,site_id,slug,title,status,sections_json,page_type,template_key,draft_version_id,indexable,created_at,updated_at)
       VALUES (?,?,?,?,?,'draft','[]',?,?,?,1,?,?)`).bind(pageId,input.workspace.id,siteId,slug,title,pageType,input.templateKey||null,versionId,now,now),
@@ -70,7 +71,7 @@ export async function readDraftPage(db: WebsiteDatabase, workspaceId: string, pa
       id:string;title:string;slug:string;pageType:string;templateKey:string|null;seoTitle:string|null;seoDescription:string|null;canonicalUrl:string|null;socialImageAssetId:string|null;indexable:number;versionId:string;documentJson:string;versionNumber:number;
     }>();
   if (!row) throw new Response("Draft not found", { status: 404 });
-  return { ...row, indexable: Boolean(row.indexable), document: parsePageDocument(String(row.documentJson)), documentJson: undefined };
+  return { ...row, indexable: Boolean(row.indexable), document: normalizeRegisteredPageDocument(parsePageDocument(String(row.documentJson))), documentJson: undefined };
 }
 
 export async function listPageVersions(db: WebsiteDatabase, workspaceId: string, pageId: string) {
@@ -89,7 +90,7 @@ export async function rollbackPage(db: WebsiteDatabase, input: {
       id:string;documentJson:string;schemaVersion:number;versionNumber:number;
     }>();
   if (!source) throw new Response("Page version not found", { status: 404 });
-  const document = parsePageDocument(source.documentJson);
+  const document = normalizeRegisteredPageDocument(parsePageDocument(source.documentJson));
   const draftId = String(page.draft_version_id || "");
   if (!draftId) throw new Error("Page has no draft version");
   const now = Date.now();
@@ -105,7 +106,7 @@ export async function rollbackPage(db: WebsiteDatabase, input: {
 
 export async function saveDraft(db: WebsiteDatabase, input: { workspaceId: string; pageId: string; actorUserId: string; document: unknown; title?: string; slug?: string; pageType?: PageType; seo?: PageSeo }) {
   const page = await ownedPage(db,input.workspaceId,input.pageId);
-  const document = validatePageDocument(input.document), now = Date.now();
+  const document = normalizeRegisteredPageDocument(validatePageDocument(input.document)), now = Date.now();
   const draftId = String(page.draft_version_id || "");
   if (!draftId) throw new Error("Page has no draft version");
   const slug = input.slug === undefined ? null : cleanSlug(input.slug);
@@ -125,14 +126,14 @@ export async function publishPage(db: WebsiteDatabase, input: { workspaceId: str
   const page = await ownedPage(db,input.workspaceId,input.pageId);
   const draft = await db.prepare("SELECT document_json,schema_version FROM page_versions WHERE id=? AND state='draft'").bind(String(page.draft_version_id)).first<{document_json:string;schema_version:number}>();
   if (!draft) throw new Error("Page has no valid draft");
-  parsePageDocument(draft.document_json);
+  const normalized=normalizeRegisteredPageDocument(parsePageDocument(draft.document_json));
   const publishedId=crypto.randomUUID(),now=Date.now();
   const max=await db.prepare("SELECT COALESCE(MAX(version_number),0) AS value FROM page_versions WHERE page_id=?").bind(input.pageId).first<{value:number}>();
   const version=Number(max?.value||0)+1;
   await db.batch([
     db.prepare("UPDATE page_versions SET state='archived' WHERE page_id=? AND state='published'").bind(input.pageId),
     db.prepare("INSERT INTO page_versions (id,page_id,version_number,state,schema_version,document_json,created_by,created_at,published_at) VALUES (?,?,?,'published',1,?,?,?,?)")
-      .bind(publishedId,input.pageId,version,draft.document_json,input.actorUserId,now,now),
+      .bind(publishedId,input.pageId,version,JSON.stringify(normalized),input.actorUserId,now,now),
     db.prepare("UPDATE page_versions SET id=id WHERE id=? AND state='draft'").bind(String(page.draft_version_id)),
     db.prepare("UPDATE pages SET status='published',published_version_id=?,updated_at=? WHERE id=?").bind(publishedId,now,input.pageId),
   ]);
@@ -190,5 +191,5 @@ export async function resolvePublicPage(db:WebsiteDatabase,input:{slug?:string;h
   if(!versionId) return null;
   const version=await db.prepare("SELECT document_json AS documentJson FROM page_versions WHERE id=? AND state=?").bind(versionId,preview?'draft':'published').first<{documentJson:string}>();
   if(!version) return null;
-  return {site,page:{id:String(page.id),title:String(page.title),slug:String(page.slug),pageType:String(page.page_type),seo:{title:page.seo_title==null?null:String(page.seo_title),description:page.seo_description==null?null:String(page.seo_description),canonicalUrl:page.canonical_url==null?null:String(page.canonical_url),socialImageAssetId:page.social_image_asset_id==null?null:String(page.social_image_asset_id),indexable:Boolean(page.indexable)},document:parsePageDocument(version.documentJson)},preview};
+  return {site,page:{id:String(page.id),title:String(page.title),slug:String(page.slug),pageType:String(page.page_type),seo:{title:page.seo_title==null?null:String(page.seo_title),description:page.seo_description==null?null:String(page.seo_description),canonicalUrl:page.canonical_url==null?null:String(page.canonical_url),socialImageAssetId:page.social_image_asset_id==null?null:String(page.social_image_asset_id),indexable:Boolean(page.indexable)},document:normalizeRegisteredPageDocument(parsePageDocument(version.documentJson))},preview};
 }

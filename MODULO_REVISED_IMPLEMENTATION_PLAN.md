@@ -16,9 +16,9 @@
 
 ## Current verified status
 
-- Phases 0-5: Complete.
-- Phase 6: Next phase.
-- Phases 6-25: Not started.
+- Phases 0-6: Complete.
+- Phase 7: Next phase.
+- Phases 7-25: Not started.
 
 ## Product rules
 
@@ -41,7 +41,7 @@
 | 3 | Shared shell and capability-aware dashboards | Build now | Complete |
 | 4 | Service catalogue, opt-in and entitlements | Build now | Complete |
 | 5 | Website engine and versioned page data | Build now | Complete |
-| 6 | Automatic component and extension registry | Build now | Not started |
+| 6 | Automatic component and extension registry | Build now | Complete |
 | 7 | Themes, layouts and content-safe versioning | Build now | Not started |
 | 8 | Shared editor document model | Build now | Not started |
 | 9 | Guided ecommerce builder | Build now | Not started |
@@ -247,12 +247,12 @@ Create the common publishing engine for ecommerce, showcase, CV and portfolio si
 - Verified Phase 5 with TypeScript, lint, architecture and route contracts, migration tests, production build and the complete post-build test suite.
 - Re-reviewed the deployed workflow and closed the remaining UI integration gaps: Worker-safe builder routing, publish-in-place with a real live link, create/duplicate/publish/unpublish/delete controls, main-menu placement, correct slug-routed navigation and working multi-workspace creation/switching.
 - Re-ran the full definition-of-done gate after the live fixes; TypeScript, lint, architecture contracts, the production Vinext/Cloudflare build and all post-build tests pass.
-- Phase 6 was not started.
+- Phase 6 was completed separately; Phase 7 was not started.
 
 ## Current development snapshot and unfinished-component disclosure
 
-- Phases 0-5 are complete. The deployed Phase 5 review also fixed builder routing, publish-in-place, page lifecycle actions, navigation placement, real public links and multi-workspace creation/switching.
-- Phases 6-25 remain not started; the existing screens for those areas are foundations or previews and must not imply that their complete workflows already exist.
+- Phases 0-6 are complete. The deployed Phase 5 review also fixed builder routing, publish-in-place, page lifecycle actions, navigation placement, real public links and multi-workspace creation/switching.
+- Phases 7-25 remain not started; the existing screens for those areas are foundations or previews and must not imply that their complete workflows already exist.
 - Every visible but unfinished component must show a compact `Planned for Phase X` badge using the delivery phase defined in this plan. Completed components must not display the badge.
 - An unfinished control must be disabled or clearly non-destructive, include an accessible explanation, and must not navigate to a misleading dead-end screen.
 - Editor-document controls such as section duplication, undo/redo, generated settings and recoverable layout operations use `Planned for Phase 8` until Phase 8 passes its definition of done.
@@ -269,7 +269,7 @@ Review Phase 5 against its definition of done. Fix anything incomplete. If every
 
 # Phase 6 - Automatic component and extension registry
 
-**Status:** Not started
+**Status:** Complete
 
 **Delivery stage:** Build now
 
@@ -291,6 +291,17 @@ Let sections, blocks and editor controls appear automatically from manifests wit
 - A new valid component folder appears automatically.
 - Invalid manifests fail with useful errors.
 - Existing documents survive component upgrades.
+
+## Completion record - 2026-09-01
+
+- Added typed section, block and global manifests with build-time discovery of both single-file and folder packages.
+- Added source-specific manifest validation, scalar settings validation and sequential version migrations shared by client and server workflows.
+- Added generated section, block and global registries, manifest-driven editor fields and shared registered renderers.
+- Added recursive nested blocks with a four-level safety limit, global announcement/footer packages and component error boundaries.
+- Added starter ecommerce product, business service, CV summary and portfolio gallery sections; the product starter is a folder package that proves parent-file-free discovery.
+- Added page-document component versions and normalization on create, read, save, rollback and publish while preserving unknown component data.
+- Verified automatic folder discovery, useful invalid-manifest failures and migration preservation with dedicated tests, TypeScript, the full test suite and production build.
+- Phase 7 was not started.
 
 ## Instruction to give Codex
 

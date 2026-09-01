@@ -9,7 +9,9 @@ export type PageType = (typeof pageTypes)[number];
 export type PageBlock = {
   id: string;
   type: string;
+  version?: number;
   settings: Record<string, string | number | boolean | null>;
+  blocks?: PageBlock[];
 };
 
 export type PageSection = PageBlock & { blocks: PageBlock[] };
@@ -34,7 +36,7 @@ function record(value: unknown, label: string) {
   return Object.fromEntries(entries) as Record<string, string | number | boolean | null>;
 }
 
-function node(value: unknown, label: string): PageBlock {
+function node(value: unknown, label: string, depth=0): PageBlock {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new PageDocumentValidationError(`${label} must be an object`);
   }
@@ -45,7 +47,10 @@ function node(value: unknown, label: string): PageBlock {
   if (typeof input.type !== "string" || !/^[a-z0-9][a-z0-9_-]{0,79}$/.test(input.type)) {
     throw new PageDocumentValidationError(`${label} has an invalid component type`);
   }
-  return { id: input.id, type: input.type, settings: record(input.settings ?? {}, `${label}.settings`) };
+  if(depth>4)throw new PageDocumentValidationError(`${label} exceeds maximum nesting depth`);
+  const version=input.version===undefined?undefined:Number(input.version);if(version!==undefined&&(!Number.isInteger(version)||version<1))throw new PageDocumentValidationError(`${label} has an invalid version`);
+  const children=input.blocks??[];if(!Array.isArray(children)||children.length>100)throw new PageDocumentValidationError(`${label}.blocks must be an array of at most 100 items`);
+  return { id: input.id, type: input.type,version,settings: record(input.settings ?? {}, `${label}.settings`),blocks:children.map((child,index)=>node(child,`${label}.blocks[${index}]`,depth+1)) };
 }
 
 export function validatePageDocument(value: unknown): PageDocument {
@@ -66,8 +71,9 @@ export function validatePageDocument(value: unknown): PageDocument {
     if (!Array.isArray(rawBlocks) || rawBlocks.length > 100) {
       throw new PageDocumentValidationError(`sections[${index}].blocks must be an array of at most 100 items`);
     }
-    const blocks = rawBlocks.map((block, blockIndex) => node(block, `sections[${index}].blocks[${blockIndex}]`));
-    for (const entry of [section, ...blocks]) {
+    const blocks = rawBlocks.map((block, blockIndex) => node(block, `sections[${index}].blocks[${blockIndex}]`,1));
+    const flatten=(entry:PageBlock):PageBlock[]=>[entry,...(entry.blocks||[]).flatMap(flatten)];
+    for (const entry of [section, ...blocks.flatMap(flatten)]) {
       if (ids.has(entry.id)) throw new PageDocumentValidationError(`Duplicate component id: ${entry.id}`);
       ids.add(entry.id);
     }

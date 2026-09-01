@@ -9,8 +9,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { sectionRegistry } from "@/lib/builder/registry";
 import type { SiteSection } from "@/lib/builder/types";
+import {RegisteredGlobals,RegisteredSectionRenderer} from "@/lib/builder/registered-renderer";
 type Item = { id: string; title: string; description: string; price: number };
 const copy = {
   store: {
@@ -97,16 +97,12 @@ export function PublicSite({ slug, pageSlug="home" }: { slug: string; pageSlug?:
   };
   return (
     <main className="min-h-screen bg-[#fbfaf7] text-[#191a17]">
+      <RegisteredGlobals slot="before"/>
       <header className="flex h-16 items-center justify-between border-b border-black/8 px-6 lg:px-12">
         <strong>{data.workspace.name}</strong>
         <nav aria-label="Main navigation" className="text-sm text-black/50"><ul className="flex gap-5">{(data.navigation||[]).filter(item=>!item.parentId).map(item=><li key={item.id} className="relative"><a href={publicHref(item.url)}>{item.label}</a>{data.navigation.some(child=>child.parentId===item.id)&&<ul className="absolute right-0 z-20 mt-2 min-w-40 rounded-xl border bg-white p-2 shadow-lg">{data.navigation.filter(child=>child.parentId===item.id).map(child=><li key={child.id}><a className="block rounded-lg px-3 py-2 hover:bg-black/5" href={publicHref(child.url)}>{child.label}</a></li>)}</ul>}</li>)}</ul></nav>
       </header>
-      {data.page.sections.map((s) => {
-        const def = sectionRegistry[s.type];
-        if (!def) return null;
-        const C = def.component;
-        return <C key={s.id} settings={s.settings} blocks={s.blocks} />;
-      })}
+      {data.page.sections.map((s) => <RegisteredSectionRenderer key={s.id} section={s}/>)}
       <section className="px-6 py-16 lg:px-12">
         <div className="mx-auto max-w-6xl">
           <p className="text-xs font-semibold uppercase tracking-[.2em] text-black/35">
@@ -190,6 +186,7 @@ export function PublicSite({ slug, pageSlug="home" }: { slug: string; pageSlug?:
           )}
         </div>
       </section>
+      <RegisteredGlobals slot="after"/>
     </main>
   );
 }

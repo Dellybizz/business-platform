@@ -17,8 +17,6 @@ import {
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   sectionRegistry,
   availableSections,
@@ -28,6 +26,9 @@ import type { SiteSection } from "@/lib/builder/types";
 import { themeStyle } from "@/lib/themes/registry";
 import { BlockEditor } from "@/components/platform/block-editor";
 import { PhaseDeliveryBadge } from "@/components/platform/phase-delivery-badge";
+import {RegisteredSectionRenderer} from "@/lib/builder/registered-renderer";
+import {ManifestField} from "@/components/platform/manifest-field";
+import type {SettingValue} from "@/lib/builder/types";
 
 const initial: SiteSection[] = ["hero","features","callout"].flatMap((type,index)=>{
   const definition=sectionRegistry[type],preset=definition?.presets[0];
@@ -87,7 +88,7 @@ export function WebsiteBuilder({pageSlug}:{pageSlug:string}) {
     [next[index], next[target]] = [next[target], next[index]];
     setSections(next);
   };
-  const update = (key: string, value: string) =>
+  const update = (key: string, value: SettingValue) =>
     setSections((x) =>
       x.map((s) =>
         s.id === active
@@ -256,16 +257,13 @@ export function WebsiteBuilder({pageSlug}:{pageSlug:string}) {
               </span>
             </div>
             {sections.map((s) => {
-              const definition = sectionRegistry[s.type];
-              if (!definition) return null;
-              const C = definition.component;
               return (
                 <div
                   key={s.id}
                   onClick={() => setActive(s.id)}
                   className={`cursor-pointer outline-offset-[-2px] ${active === s.id ? "outline-2 outline-[#3b7c5a]" : "hover:outline hover:outline-1 hover:outline-black/20"}`}
                 >
-                  <C settings={s.settings} blocks={s.blocks} />
+                  <RegisteredSectionRenderer section={s} />
                 </div>
               );
             })}
@@ -287,33 +285,7 @@ export function WebsiteBuilder({pageSlug}:{pageSlug:string}) {
                     <span className="mb-2 block text-xs font-medium">
                       {f.label}
                     </span>
-                    {f.type === "textarea" ? (
-                      <Textarea
-                        value={current.settings[f.key]}
-                        onChange={(e) => update(f.key, e.target.value)}
-                        className="min-h-24 rounded-xl"
-                      />
-                    ) : f.type === "color" ? (
-                      <div className="flex gap-2">
-                        <input
-                          type="color"
-                          value={current.settings[f.key]}
-                          onChange={(e) => update(f.key, e.target.value)}
-                          className="h-10 w-12 rounded-lg border p-1"
-                        />
-                        <Input
-                          value={current.settings[f.key]}
-                          onChange={(e) => update(f.key, e.target.value)}
-                          className="rounded-xl"
-                        />
-                      </div>
-                    ) : (
-                      <Input
-                        value={current.settings[f.key]}
-                        onChange={(e) => update(f.key, e.target.value)}
-                        className="rounded-xl"
-                      />
-                    )}
+                    <ManifestField field={f} value={current.settings[f.key]} onChange={value=>update(f.key,value)}/>
                   </label>
                 ))}
               </div>
