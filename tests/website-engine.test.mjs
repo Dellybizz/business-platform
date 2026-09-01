@@ -67,7 +67,7 @@ test("domains and assets are workspace-owned website resources",async()=>{
   }
 });
 
-test("the revised plan marks Phase 8 complete and leaves Phase 9 untouched",async()=>{
+test("the revised plan marks Phase 9 complete and leaves Phase 10 untouched",async()=>{
   const plan=await source("MODULO_REVISED_IMPLEMENTATION_PLAN.md");
   const phase5=plan.slice(plan.indexOf("# Phase 5"),plan.indexOf("# Phase 6"));
   const phase6=plan.slice(plan.indexOf("# Phase 6"),plan.indexOf("# Phase 7"));
@@ -82,7 +82,10 @@ test("the revised plan marks Phase 8 complete and leaves Phase 9 untouched",asyn
   assert.match(phase8,/\*\*Status:\*\* Complete/);
   assert.match(phase8,/Completion record - 2026-09-01/);
   const phase9=plan.slice(plan.indexOf("# Phase 9"),plan.indexOf("# Phase 10"));
-  assert.match(phase9,/\*\*Status:\*\* Not started/);
+  assert.match(phase9,/\*\*Status:\*\* Complete/);
+  assert.match(phase9,/Completion record - 2026-09-01/);
+  const phase10=plan.slice(plan.indexOf("# Phase 10"),plan.indexOf("# Phase 11"));
+  assert.match(phase10,/\*\*Status:\*\* Not started/);
 });
 
 test("public resolution serves published content unless a valid preview token is supplied",async()=>{

@@ -36,7 +36,7 @@ export async function GET(request: Request, { params }: Context) {
   ]);
   return Response.json({
     workspace,
-    page: {...resolved.page,sections:resolved.page.document.sections,document:undefined},
+    page: {...resolved.page,sections:resolved.page.document.sections,dataSources:resolved.page.document.dataSources,document:undefined},
     preview:resolved.preview,
     items: items.results,
     navigation: navigation.results,

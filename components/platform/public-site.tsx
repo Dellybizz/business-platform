@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { SiteSection } from "@/lib/builder/types";
 import {RegisteredGlobals,RegisteredSectionRenderer} from "@/lib/builder/registered-renderer";
-type Item = { id: string; title: string; description: string; price: number };
+type Item = { id: string; kind:string; title: string; description: string; price: number };
 const copy = {
   store: {
     heading: "Featured products",
@@ -38,7 +38,7 @@ const copy = {
 export function PublicSite({ slug, pageSlug="home",previewToken }: { slug: string; pageSlug?:string;previewToken?:string }) {
   const [data, setData] = useState<{
       workspace: { name: string; mode: keyof typeof copy };
-      page: { title:string; sections: SiteSection[]; seo?:{title?:string|null;description?:string|null;indexable?:boolean} };
+      page: { title:string; sections: SiteSection[]; dataSources?:Record<string,{role:string;query?:Record<string,string|number|boolean|null>}>;seo?:{title?:string|null;description?:string|null;indexable?:boolean} };
       items: Item[];
       navigation:Array<{id:string;parentId?:string|null;label:string;url:string;position:number}>;
     } | null>(null),
@@ -72,6 +72,7 @@ export function PublicSite({ slug, pageSlug="home",previewToken }: { slug: strin
     );
   const labels = copy[data.workspace.mode],
     Icon = labels.icon;
+  const collectionSource=Object.values(data.page.dataSources||{}).find(source=>source.role==="catalog.collections"),productSource=Object.values(data.page.dataSources||{}).find(source=>source.role==="catalog.products"),source=pageSlug==="collections"?collectionSource:productSource,sourceIds=String(source?.query?.ids||"").split(",").filter(Boolean),hasCatalog=Boolean(source)&&data.page.sections.some(section=>section.type==="product-showcase"),catalogItems=data.items.filter(item=>(pageSlug==="collections"?item.kind==="collection":item.kind==="product")&&(!sourceIds.length||sourceIds.includes(item.id)));
   const publicHref=(url:string)=>{
     if(!url.startsWith("/")||url.startsWith("//"))return url;
     const usesSlugRoute=typeof window!=="undefined"&&window.location.pathname.startsWith(`/s/${slug}`);
@@ -103,14 +104,14 @@ export function PublicSite({ slug, pageSlug="home",previewToken }: { slug: strin
         <nav aria-label="Main navigation" className="text-sm text-black/50"><ul className="flex gap-5">{(data.navigation||[]).filter(item=>!item.parentId).map(item=><li key={item.id} className="relative"><a href={publicHref(item.url)}>{item.label}</a>{data.navigation.some(child=>child.parentId===item.id)&&<ul className="absolute right-0 z-20 mt-2 min-w-40 rounded-xl border bg-white p-2 shadow-lg">{data.navigation.filter(child=>child.parentId===item.id).map(child=><li key={child.id}><a className="block rounded-lg px-3 py-2 hover:bg-black/5" href={publicHref(child.url)}>{child.label}</a></li>)}</ul>}</li>)}</ul></nav>
       </header>
       {data.page.sections.map((s) => <RegisteredSectionRenderer key={s.id} section={s}/>)}
-      <section className="px-6 py-16 lg:px-12">
+      {hasCatalog&&<section data-dynamic-source="catalog" className="px-6 py-16 lg:px-12">
         <div className="mx-auto max-w-6xl">
           <p className="text-xs font-semibold uppercase tracking-[.2em] text-black/35">
             Explore
           </p>
           <h2 className="mt-2 text-3xl font-semibold">{labels.heading}</h2>
           <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {data.items.map((item) => (
+            {catalogItems.map((item) => (
               <article
                 key={item.id}
                 className="overflow-hidden rounded-3xl border border-black/8 bg-white"
@@ -146,7 +147,7 @@ export function PublicSite({ slug, pageSlug="home",previewToken }: { slug: strin
             ))}
           </div>
         </div>
-      </section>
+      </section>}
       <section id="public-enquiry" className="bg-[#e4ece5] px-6 py-16">
         <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-2">
           <div>

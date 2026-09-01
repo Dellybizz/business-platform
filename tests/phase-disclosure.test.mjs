@@ -18,9 +18,9 @@ test("unfinished components disclose their actual delivery phase",async()=>{
   assert.match(dashboard,/PhaseDeliveryBadge phase=\{17\}/);
 });
 
-test("the plan defines disclosure without starting Phase 9",async()=>{
+test("the plan defines disclosure without starting Phase 10",async()=>{
   const plan=await read("MODULO_REVISED_IMPLEMENTATION_PLAN.md");
   assert.match(plan,/Current development snapshot and unfinished-component disclosure/);
   assert.match(plan,/Completed components must not display the badge/);
-  assert.match(plan,/# Phase 9[\s\S]*?\*\*Status:\*\* Not started/);
+  assert.match(plan,/# Phase 10[\s\S]*?\*\*Status:\*\* Not started/);
 });

@@ -44,6 +44,7 @@ export function buildAdminNavigation(
       label: "Website",
       items: [
         { id: "website-overview", label: "Website", href: "/site", icon: "website", mobile: true },
+        ...(context.type === "commerce_business" ? [{ id: "guided-storefront", label: "Guided storefront", href: "/guided-storefront", icon: "editor" }] : []),
         { id: "visual-editor", label: "Visual editor", href: "/builder", icon: "editor" },
         { id: "pages", label: "Pages", href: "/pages", icon: "pages" },
         { id: "themes", label: "Themes", href: "/themes", icon: "themes" },

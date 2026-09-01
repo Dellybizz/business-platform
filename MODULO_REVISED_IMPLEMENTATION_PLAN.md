@@ -16,9 +16,9 @@
 
 ## Current verified status
 
-- Phases 0-8: Complete.
-- Phase 9: Next phase.
-- Phases 9-25: Not started.
+- Phases 0-9: Complete.
+- Phase 10: Next phase.
+- Phases 10-25: Not started.
 
 ## Product rules
 
@@ -44,7 +44,7 @@
 | 6 | Automatic component and extension registry | Build now | Complete |
 | 7 | Themes, layouts and content-safe versioning | Build now | Complete |
 | 8 | Shared editor document model | Build now | Complete |
-| 9 | Guided ecommerce builder | Build now | Not started |
+| 9 | Guided ecommerce builder | Build now | Complete |
 | 10 | Advanced ecommerce visual editor | Build now | Not started |
 | 11 | CV, portfolio and showcase builders | Build now | Not started |
 | 12 | Shared commerce core | Build now | Not started |
@@ -345,7 +345,7 @@ Separate visual presentation from merchant data and establish layout presets for
 - Updated the theme gallery with separate Preview and Activate actions plus activation-history rollback; direct workspace theme mutation is no longer accepted.
 - Added the Phase 7 D1 migration and legacy-theme backfill. Theme writes affect only theme-version and workspace presentation records, never page documents or merchant content.
 - Verified all three Phase 7 definition-of-done conditions with dedicated tests, TypeScript, lint, architecture contracts, production build and the complete post-build suite.
-- Phase 8 was completed separately; Phase 9 was not started.
+- Phases 8 and 9 were completed separately; Phase 10 was not started.
 
 ## Instruction to give Codex
 
@@ -391,7 +391,7 @@ Create one document engine that supports Guided and Advanced editing without cre
 - Added atomic layout replacement with mandatory pre-replacement backup, backup listing and recoverable restore.
 - Added the Phase 8 D1 migration and baseline backups for existing drafts.
 - Verified every Phase 8 definition-of-done item with dedicated tests, TypeScript, lint, architecture contracts, production build and the full post-build suite.
-- Phase 9 was not started.
+- Phase 9 was completed separately; Phase 10 was not started.
 
 ## Instruction to give Codex
 
@@ -403,7 +403,7 @@ Review Phase 8 against its definition of done. Fix anything incomplete. If every
 
 # Phase 9 - Guided ecommerce builder
 
-**Status:** Not started
+**Status:** Complete
 
 **Delivery stage:** Build now
 
@@ -425,6 +425,20 @@ Generate a complete ecommerce site for users who want minimal setup or have limi
 - A merchant can publish a populated storefront without arranging sections.
 - Catalogue changes update bound layouts automatically.
 - Generated pages remain editable in Advanced mode.
+
+## Completion record - 2026-09-01
+
+- Added a dedicated form-based Guided storefront surface for business identity, branding, featured products, featured collections and desired content.
+- Added deterministic generation of Home, Product, Collection, Search, Cart and Store Policies layouts, including catalogue index pages, without requiring merchants to arrange sections.
+- Generated every page as a schema-version-2 Phase 8 document in Guided mode, with catalogue product and collection query bindings rather than copied catalogue records.
+- Updated public rendering so catalogue-bound layouts resolve current active products or collections on every request; catalogue edits therefore appear without regenerating layouts.
+- Added recommended defaults, launch-readiness checks and a Generate and publish action that refuses to publish an empty product catalogue.
+- Generated the storefront's main navigation automatically so published pages are immediately reachable.
+- Preserved every existing page through the Phase 8 layout-backup path before regeneration.
+- Added safe promotion of the generated Home page into the existing Advanced editor without changing its document format.
+- Added the Phase 9 D1 profile migration and dedicated definition-of-done tests.
+- Verified all Phase 9 conditions with TypeScript, lint, architecture contracts, a production build and the full post-build suite.
+- Phase 10 was not started.
 
 ## Instruction to give Codex
 
