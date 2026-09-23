@@ -16,9 +16,9 @@
 
 ## Current verified status
 
-- Phases 0-9: Complete.
-- Phase 10: Next phase.
-- Phases 10-25: Not started.
+- Phases 0-10: Complete.
+- Phase 11: Next phase.
+- Phases 11-25: Not started.
 
 ## Product rules
 
@@ -45,7 +45,7 @@
 | 7 | Themes, layouts and content-safe versioning | Build now | Complete |
 | 8 | Shared editor document model | Build now | Complete |
 | 9 | Guided ecommerce builder | Build now | Complete |
-| 10 | Advanced ecommerce visual editor | Build now | Not started |
+| 10 | Advanced ecommerce visual editor | Build now | Complete |
 | 11 | CV, portfolio and showcase builders | Build now | Not started |
 | 12 | Shared commerce core | Build now | Not started |
 | 13 | Online Store channel and commerce rendering | Build now | Not started |
@@ -450,7 +450,7 @@ Review Phase 9 against its definition of done. Fix anything incomplete. If every
 
 # Phase 10 - Advanced ecommerce visual editor
 
-**Status:** Not started
+**Status:** Complete
 
 **Delivery stage:** Build now
 
@@ -472,6 +472,19 @@ Give expert users Shopify-style structural control with additional WordPress-sty
 - Non-technical users can still operate the editor.
 - Advanced users can restructure pages without source edits.
 - Every action has desktop support and usable mobile fallback.
+
+## Completion record - 2026-09-23
+
+- Added a page tree and a synchronized section/block hierarchy with direct preview selection, HTML drag-and-drop, and labelled move-up/move-down keyboard alternatives.
+- Added desktop, tablet and mobile preview modes plus responsive visibility, spacing, typography, alignment, gap, column and layout controls for sections and blocks.
+- Added Product, Collection and Standard page templates. Applying a template uses the existing atomic layout-replacement endpoint, which always creates a recoverable backup before changing the draft.
+- Added reusable/global sections stored in the shared page document. Every instance keeps a stable global key and synchronized content while retaining a unique component ID.
+- Added a manifest-discovered App block with controlled storefront extension targets and a safe fallback when no approved app is connected.
+- Added scoped custom CSS with server-side validation. Imports, URLs, script-like values, markup, global selectors and unsupported declarations are rejected; preview and public output are isolated under `.modulo-site`.
+- Added production rendering for responsive section/block styles and preserved draft/published isolation through the existing versioned page service.
+- Added a purpose-built mobile editor toolbar and full-screen Structure and Settings panels so structural editing, responsive settings, undo and redo remain usable without shrinking the desktop sidebars.
+- Verified Phase 10 with dedicated advanced-editor tests, TypeScript, lint, architecture contracts, the production build and the complete post-build suite.
+- Phase 11 was not started.
 
 ## Instruction to give Codex
 

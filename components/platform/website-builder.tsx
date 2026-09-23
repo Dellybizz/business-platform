@@ -15,8 +15,10 @@ import {
   Redo2,
   Save,
   Smartphone,
+  Tablet,
   Trash2,
   Undo2,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,6 +35,7 @@ import type {SettingValue} from "@/lib/builder/types";
 import type{PageDocument,PageSection}from"@/src/website/page-document";
 import{useEditorDocument}from"@/lib/editor/use-editor-document";
 import{duplicateSection,insertSection,removeSection,reorderSection}from"@/lib/editor/document-state";
+import{editorTemplate,insertReusableSection,moveSection,reusableSections,sanitizeCustomCss,saveReusableSection,synchronizeGlobalSection,updateResponsiveStyles,type EditorBreakpoint}from"@/lib/editor/advanced-editor";
 
 const initialSections: SiteSection[] = ["hero","features","callout"].flatMap((type,index)=>{
   const definition=sectionRegistry[type],preset=definition?.presets[0];
@@ -44,7 +47,9 @@ export function WebsiteBuilder({pageSlug}:{pageSlug:string}) {
   const sections=document.sections as SiteSection[];
   const setSections=(next:SiteSection[]|((current:SiteSection[])=>SiteSection[]))=>setDocument(current=>({...current,sections:(typeof next==="function"?next(current.sections as SiteSection[]):next)as PageSection[]}));
   const [active, setActive] = useState(initialSections[0].id),
-    [device, setDevice] = useState<"desktop" | "mobile">("desktop");
+    [device, setDevice] = useState<EditorBreakpoint>("desktop");
+  const [mobilePanel,setMobilePanel]=useState<"structure"|"settings"|null>(null),[dragged,setDragged]=useState("");
+  const [pages,setPages]=useState<Array<{id:string;slug:string;title:string}>>([]),[cssError,setCssError]=useState("");
   const [themeId, setThemeId] = useState("atelier"),
     [mode, setMode] = useState("store");
   const [workspaceSlug,setWorkspaceSlug]=useState("");
@@ -55,6 +60,7 @@ export function WebsiteBuilder({pageSlug}:{pageSlug:string}) {
   >("loading");
   const loaded = useRef(false);
   useEffect(() => {
+    fetch("/api/pages").then(response=>response.ok?response.json():null).then(data=>setPages(data?.pages||[])).catch(()=>{});
     fetch(`/api/workspace?page=${encodeURIComponent(pageSlug)}`)
       .then(async(r) => {const d=await r.json();if(!r.ok)throw new Error(d.error||"Could not load page");return d;})
       .then((d) => {
@@ -71,6 +77,7 @@ export function WebsiteBuilder({pageSlug}:{pageSlug:string}) {
       })
       .catch(() => setSaveState("error"));
   }, [pageSlug,resetDocument]);
+  useEffect(()=>{const handler=(event:KeyboardEvent)=>{if(!(event.ctrlKey||event.metaKey))return;if(event.key.toLowerCase()==="z"){event.preventDefault();if(event.shiftKey)redo();else undo()}else if(event.key.toLowerCase()==="y"){event.preventDefault();redo()}};window.addEventListener("keydown",handler);return()=>window.removeEventListener("keydown",handler)},[undo,redo]);
   useEffect(() => {
     if (!loaded.current) return;
     setSaveState("saving");
@@ -111,6 +118,11 @@ export function WebsiteBuilder({pageSlug}:{pageSlug:string}) {
   };
   const preview=async()=>{if(!pageId||!workspaceSlug||!await saveNow())return;const response=await fetch(`/api/pages/${pageId}/preview`,{method:"POST"}),data=await response.json();if(!response.ok){setSaveState("error");return}window.open(`${liveHref}?preview=${encodeURIComponent(data.token)}`,"_blank","noopener,noreferrer")};
   const changeMode=async(mode:"guided"|"advanced")=>{if(!pageId||!await saveNow())return;const response=await fetch(`/api/pages/${pageId}/editor-mode`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({mode})});if(!response.ok){setSaveState("error");return}setDocument(current=>({...current,editorMode:mode}))};
+  const applyTemplate=async(kind:"product"|"collection"|"standard")=>{if(!pageId)return;const next={...document,editorMode:"advanced" as const,sections:editorTemplate(kind,(type)=>createSection(type)as PageSection)};const response=await fetch(`/api/pages/${pageId}/layout`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({document:next})});if(!response.ok){setSaveState("error");return}resetDocument(next);setActive(next.sections[0]?.id||"");setSaveState("saved")};
+  const updateAdvancedStyle=(values:Record<string,string|number|boolean|undefined>)=>current&&setDocument(value=>synchronizeGlobalSection(value,updateResponsiveStyles(current,device,values)as PageSection));
+  const changeSection=(next:SiteSection)=>setDocument(value=>synchronizeGlobalSection(value,next as PageSection));
+  const saveReusable=()=>{if(!current)return;const name=window.prompt("Name this reusable section",def?.name||"Reusable section");if(name)setDocument(value=>saveReusableSection(value,current.id,name))};
+  const changeCss=(value:string)=>{try{const safe=value.trim()?sanitizeCustomCss(value):"";setCssError("");setDocument(current=>({...current,globalTokens:{...current.globalTokens,"advanced.customCss":safe}}))}catch(error){setCssError(error instanceof Error?error.message:"Custom CSS is invalid")}};
   const liveHref=workspaceSlug?`/s/${workspaceSlug}${pageSlug==="home"?"":`/${pageSlug}`}`:"";
   return (
     <main className="flex h-screen flex-col overflow-hidden bg-[#eceee9] text-[#1b1d19]">
@@ -149,6 +161,7 @@ export function WebsiteBuilder({pageSlug}:{pageSlug:string}) {
           >
             <Smartphone className="size-4" />
           </button>
+          <button onClick={()=>setDevice("tablet")} aria-label="Tablet preview" className={`rounded-md p-2 ${device==="tablet"?"bg-white shadow-sm":"text-black/40"}`}><Tablet className="size-4"/></button>
         </div>
         <div className="flex gap-2">
           <select aria-label="Editor level" value={document.editorMode} onChange={event=>changeMode(event.target.value as "guided"|"advanced")} className="rounded-xl border bg-white px-3 text-sm"><option value="guided">Guided</option><option value="advanced">Advanced</option></select>
@@ -178,17 +191,23 @@ export function WebsiteBuilder({pageSlug}:{pageSlug:string}) {
         </div>
       </header>
       <div className="grid min-h-0 flex-1 lg:grid-cols-[280px_1fr_310px]">
-        <aside className="hidden overflow-y-auto border-r border-black/10 bg-white p-4 lg:block">
+        <aside className={`${mobilePanel==="structure"?"fixed inset-0 z-50 block":"hidden"} overflow-y-auto border-r border-black/10 bg-white p-4 lg:static lg:block`}>
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold">Page sections</p>
-            <Layers3 className="size-4 text-black/35" />
+            <div className="flex items-center gap-2"><Layers3 className="size-4 text-black/35" /><button className="lg:hidden" onClick={()=>setMobilePanel(null)} aria-label="Close structure panel"><X className="size-4"/></button></div>
           </div>
+          <label className="mt-4 block text-xs font-medium">Page tree<select value={pageSlug} onChange={event=>location.href=`/builder?page=${encodeURIComponent(event.target.value)}`} className="mt-1 h-10 w-full rounded-lg border px-2">{pages.map(page=><option key={page.id} value={page.slug}>{page.title}</option>)}</select></label>
+          <label className="mt-4 block text-xs font-medium">Layout template<select defaultValue="" onChange={event=>{if(event.target.value)applyTemplate(event.target.value as "product"|"collection"|"standard")}} className="mt-1 h-10 w-full rounded-lg border px-2"><option value="">Choose a template</option><option value="product">Product page</option><option value="collection">Collection page</option><option value="standard">Standard page</option></select><small className="mt-1 block text-black/40">Replacing a layout creates a recoverable backup.</small></label>
           <div className="mt-4 space-y-2">
             {sections.map((s, i) => {
               const registered = sectionRegistry[s.type];
               return (
                 <div
                   key={s.id}
+                  draggable
+                  onDragStart={()=>setDragged(s.id)}
+                  onDragOver={event=>event.preventDefault()}
+                  onDrop={()=>{if(dragged)setDocument(value=>moveSection(value,dragged,s.id));setDragged("")}}
                   role="button"
                   tabIndex={0}
                   onClick={() => setActive(s.id)}
@@ -229,6 +248,7 @@ export function WebsiteBuilder({pageSlug}:{pageSlug:string}) {
               );
             })}
           </div>
+          {reusableSections(document).length?<><p className="mt-7 text-xs font-semibold uppercase tracking-wider text-black/35">Reusable & global</p><div className="mt-3 space-y-2">{reusableSections(document).map(item=><button key={item.id} onClick={()=>setDocument(value=>insertReusableSection(value,item.id))} className="flex w-full items-center gap-2 rounded-lg border border-dashed p-2.5 text-left text-xs"><Plus className="size-3"/>Insert {item.name}</button>)}</div></>:null}
           <p className="mt-7 text-xs font-semibold uppercase tracking-wider text-black/35">
             Add a section
           </p>
@@ -259,7 +279,7 @@ export function WebsiteBuilder({pageSlug}:{pageSlug:string}) {
         <section className="overflow-y-auto p-4 sm:p-8">
           <div
             style={themeStyle(themeId)}
-            className={`tenant-theme mx-auto min-h-full overflow-hidden shadow-[0_20px_60px_rgba(30,35,28,.14)] transition-all ${device === "mobile" ? "max-w-[390px] rounded-[2rem] border-[7px] border-[#252723]" : "max-w-5xl rounded-xl"}`}
+            className={`modulo-site tenant-theme mx-auto min-h-full overflow-hidden shadow-[0_20px_60px_rgba(30,35,28,.14)] transition-all ${device === "mobile" ? "max-w-[390px] rounded-[2rem] border-[7px] border-[#252723]" : device==="tablet"?"max-w-[768px] rounded-xl":"max-w-5xl rounded-xl"}`}
           >
             <div className="flex h-14 items-center justify-between border-b border-black/8 px-6">
               <strong className="text-sm">North & Pine</strong>
@@ -274,13 +294,14 @@ export function WebsiteBuilder({pageSlug}:{pageSlug:string}) {
                   onClick={() => setActive(s.id)}
                   className={`cursor-pointer outline-offset-[-2px] ${active === s.id ? "outline-2 outline-[#3b7c5a]" : "hover:outline hover:outline-1 hover:outline-black/20"}`}
                 >
-                  <RegisteredSectionRenderer section={s} />
+                  <RegisteredSectionRenderer section={s} breakpoint={device} />
                 </div>
               );
             })}
           </div>
         </section>
-        <aside className="hidden overflow-y-auto border-l border-black/10 bg-white p-5 lg:block">
+        <aside className={`${mobilePanel==="settings"?"fixed inset-0 z-50 block":"hidden"} overflow-y-auto border-l border-black/10 bg-white p-5 lg:static lg:block`}>
+          <div className="mb-3 flex justify-end lg:hidden"><button onClick={()=>setMobilePanel(null)} aria-label="Close settings panel"><X className="size-4"/></button></div>
           {current && def ? (
             <>
               <p className="text-xs font-semibold uppercase tracking-wider text-black/35">
@@ -303,12 +324,10 @@ export function WebsiteBuilder({pageSlug}:{pageSlug:string}) {
               <BlockEditor
                 section={current}
                 definition={def}
-                onChange={(next) =>
-                  setSections((items) =>
-                    items.map((item) => (item.id === next.id ? next : item)),
-                  )
-                }
+                breakpoint={device}
+                onChange={changeSection}
               />
+              <div className="mt-6 space-y-3 border-t pt-5"><p className="text-xs font-semibold uppercase tracking-wider text-black/35">Responsive design · {device}</p><div className="grid grid-cols-2 gap-2"><label className="text-xs">Visibility<select value={current.responsiveStyles?.[device]?.hidden?"hidden":"visible"} onChange={event=>updateAdvancedStyle({hidden:event.target.value==="hidden"})} className="mt-1 h-9 w-full rounded-lg border px-2"><option value="visible">Visible</option><option value="hidden">Hidden</option></select></label><label className="text-xs">Layout<select value={String(current.responsiveStyles?.[device]?.layout||"block")} onChange={event=>updateAdvancedStyle({layout:event.target.value})} className="mt-1 h-9 w-full rounded-lg border px-2"><option value="block">Block</option><option value="flex">Flex</option><option value="grid">Grid</option></select></label>{[["paddingTop","Top spacing"],["paddingBottom","Bottom spacing"],["paddingInline","Side spacing"],["gap","Gap"],["fontSize","Font size"],["columns","Columns"]].map(([key,label])=><label key={key} className="text-xs">{label}<input type="number" min="0" max={key==="columns"?6:320} value={String(current.responsiveStyles?.[device]?.[key]||"")} onChange={event=>updateAdvancedStyle({[key]:Number(event.target.value)||undefined})} className="mt-1 h-9 w-full rounded-lg border px-2"/></label>)}</div><label className="block text-xs">Text alignment<select value={String(current.responsiveStyles?.[device]?.textAlign||"left")} onChange={event=>updateAdvancedStyle({textAlign:event.target.value})} className="mt-1 h-9 w-full rounded-lg border px-2"><option value="left">Left</option><option value="center">Centre</option><option value="right">Right</option></select></label></div>
               <div className="mt-8 flex gap-2 border-t pt-5">
                 <Button onClick={()=>{setDocument(value=>duplicateSection(value,active));}} variant="outline" className="flex-1 rounded-xl">
                   <Copy className="size-4" />
@@ -326,14 +345,17 @@ export function WebsiteBuilder({pageSlug}:{pageSlug:string}) {
                   <Trash2 className="size-4" />
                 </Button>
               </div>
+              <Button onClick={saveReusable} variant="outline" className="mt-2 w-full rounded-xl">Save as reusable/global section</Button>
             </>
           ) : (
             <p className="text-sm text-black/40">
               Select a section to edit it.
             </p>
           )}
+          <div className="mt-8 border-t pt-5"><label className="block text-xs font-semibold uppercase tracking-wider text-black/35">Controlled custom CSS<textarea defaultValue={String(document.globalTokens["advanced.customCss"]||"")} onBlur={event=>changeCss(event.target.value)} placeholder=".hero-title { letter-spacing: .04em; }" className="mt-3 min-h-28 w-full rounded-lg border p-3 font-mono text-xs"/></label><p className={`mt-2 text-xs ${cssError?"text-red-600":"text-black/40"}`}>{cssError||"Scoped to this site. Imports, URLs, scripts and global selectors are blocked."}</p></div>
         </aside>
       </div>
+      <nav aria-label="Mobile editor tools" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t bg-white p-2 lg:hidden"><button onClick={()=>setMobilePanel("structure")} className="flex flex-col items-center gap-1 text-xs"><Layers3 className="size-4"/>Structure</button><button onClick={()=>setMobilePanel("settings")} className="flex flex-col items-center gap-1 text-xs"><Palette className="size-4"/>Settings</button><button onClick={undo} disabled={!canUndo} className="flex flex-col items-center gap-1 text-xs disabled:opacity-30"><Undo2 className="size-4"/>Undo</button><button onClick={redo} disabled={!canRedo} className="flex flex-col items-center gap-1 text-xs disabled:opacity-30"><Redo2 className="size-4"/>Redo</button></nav>
     </main>
   );
 }

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { SiteSection } from "@/lib/builder/types";
+import { responsiveStyleSheet, sanitizeCustomCss } from "@/lib/editor/advanced-editor";
 import {RegisteredGlobals,RegisteredSectionRenderer} from "@/lib/builder/registered-renderer";
 type Item = { id: string; kind:string; title: string; description: string; price: number };
 const copy = {
@@ -38,7 +39,7 @@ const copy = {
 export function PublicSite({ slug, pageSlug="home",previewToken }: { slug: string; pageSlug?:string;previewToken?:string }) {
   const [data, setData] = useState<{
       workspace: { name: string; mode: keyof typeof copy };
-      page: { title:string; sections: SiteSection[]; dataSources?:Record<string,{role:string;query?:Record<string,string|number|boolean|null>}>;seo?:{title?:string|null;description?:string|null;indexable?:boolean} };
+      page: { title:string; sections: SiteSection[]; globalTokens?:Record<string,string|number|boolean|null>; dataSources?:Record<string,{role:string;query?:Record<string,string|number|boolean|null>}>;seo?:{title?:string|null;description?:string|null;indexable?:boolean} };
       items: Item[];
       navigation:Array<{id:string;parentId?:string|null;label:string;url:string;position:number}>;
     } | null>(null),
@@ -96,8 +97,10 @@ export function PublicSite({ slug, pageSlug="home",previewToken }: { slug: strin
       });
     if (r.ok) setSent(true);
   };
+  let customCss="";try{customCss=sanitizeCustomCss(String(data.page.globalTokens?.["advanced.customCss"]||""))}catch{customCss=""}
   return (
-    <main className="min-h-screen bg-[#fbfaf7] text-[#191a17]">
+    <main className="modulo-site min-h-screen bg-[#fbfaf7] text-[#191a17]">
+      {customCss||data.page.sections.some(section=>section.responsiveStyles)?<style>{`${responsiveStyleSheet(data.page.sections as import("@/src/website/page-document").PageSection[])}\n${customCss}`}</style>:null}
       <RegisteredGlobals slot="before"/>
       <header className="flex h-16 items-center justify-between border-b border-black/8 px-6 lg:px-12">
         <strong>{data.workspace.name}</strong>

@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 export type SettingValue=string|number|boolean|null;export type ComponentSettings=Record<string,SettingValue>;
-export type SiteBlock={id:string;type:string;version?:number;settings:ComponentSettings;blocks?:SiteBlock[]};export type SiteSection=SiteBlock;
+export type SiteBlock={id:string;type:string;version?:number;settings:ComponentSettings;responsiveStyles?:Record<string,Record<string,SettingValue>>;blocks?:SiteBlock[]};export type SiteSection=SiteBlock&{blocks:SiteBlock[]};
 export type BusinessMode="store"|"services"|"portfolio"|"commerce_business"|"business_showcase"|"cv";
 export type SectionField={key:string;label:string;type:"text"|"textarea"|"color"|"number"|"checkbox"|"url"|"select";options?:Array<{label:string;value:string}>};
 export type ComponentMigration={from:number;migrate:(settings:ComponentSettings)=>ComponentSettings};
